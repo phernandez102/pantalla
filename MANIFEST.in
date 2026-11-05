@@ -1,0 +1,6 @@
+include LICENSE README.md PUBLICAR.md
+recursive-include ejemplos *.py
+recursive-include tests *.py
+include CHANGELOG.md
+recursive-include docs *.html *.js
+recursive-include src/pantalla/fuentes *.flf
