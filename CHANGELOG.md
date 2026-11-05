@@ -6,7 +6,7 @@
 - Cuentas: `sumar_vectores()`, `restar_vectores()`, `multiplicar_vector()`, `vector_entre()`, `producto_escalar()`, `producto_vectorial()`, `producto_mixto()`, `modulo()`, `unitario()`, `distancia()`, `angulo()` y `proyeccion()`. Con fracciones exactas, y el módulo sale exacto cuando la raíz lo es.
 - `producto_escalar()`, `modulo()`, `angulo()` y `producto_vectorial()` con `pasos=True` escriben la cuenta entera (`|u| = √8 = 2√2 ≈ 2.8284`).
 - `son_paralelos()`, `son_perpendiculares()` y `son_independientes()`.
-- `dibujar_vectores()` los pinta con flechas en unos ejes, desde el origen o de un punto a otro.
+- `dibujar_vectores()` los pinta con flechas en unos ejes, desde el origen o de un punto a otro. Las rayas van con puntitos braille para que salgan rectas, o con `estilo="rayas"` con ╱ ╲ │ ─.
 - La demo tiene un apartado de vectores, y en la documentación web se pueden mover con deslizadores.
 - Ejemplo nuevo: 18.
 

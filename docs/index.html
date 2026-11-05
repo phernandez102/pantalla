@@ -4977,8 +4977,40 @@ const Docs = (() => {
     return [modPy(bajo, paso) === 0 ? Math.floor(bajo / paso) * paso - paso : Math.floor(bajo / paso) * paso,
       modPy(alto, paso) === 0 ? Math.ceil(alto / paso) * paso + paso : Math.ceil(alto / paso) * paso];
   }
+  function rayaGruesa(celdas, ax, ay, bx, by, cx0, cy0, color) {
+    const [ca, fa, cb, fb] = [ax, ay, bx, by].map(redondoPy);
+    const pasos = Math.max(1, Math.abs(cb - ca), Math.abs(fb - fa)), camino = [];
+    for (let k = 0; k <= pasos; k++) {
+      const p = [ca + redondoPy((cb - ca) * k / pasos), fa + redondoPy((fb - fa) * k / pasos)], u = camino[camino.length - 1];
+      if (!u || u[0] !== p[0] || u[1] !== p[1]) camino.push(p);
+    }
+    for (let i = 0; i + 1 < camino.length; i++) {
+      const [c, f] = camino[i], [c2, f2] = camino[i + 1];
+      if (i === 0 && (c === cx0 || f === cy0)) continue;
+      const dc = c2 - c, df = f2 - f;
+      celdas[f][c] = [df === 0 ? "─" : dc === 0 ? "│" : dc * df < 0 ? "╱" : "╲", color];
+    }
+    return camino[camino.length - 1];
+  }
+  // braille: 2 columnas y 4 filas de puntos por letra
+  const BITS_BRAILLE = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]];
+  function rayaFina(celdas, ax, ay, bx, by, cx0, cy0, color) {
+    const cols = celdas[0].length, filas = celdas.length;
+    const punto = (c, f) => [Math.min(Math.max(Math.floor(c * 2 + 1), 0), cols * 2 - 1), Math.min(Math.max(Math.floor(f * 4 + 2), 0), filas * 4 - 1)];
+    const pa = punto(ax, ay), pb = punto(bx, by);
+    const ini = [Math.floor(pa[0] / 2), Math.floor(pa[1] / 4)], fin = [Math.floor(pb[0] / 2), Math.floor(pb[1] / 4)];
+    const pasos = Math.max(1, Math.abs(pb[0] - pa[0]), Math.abs(pb[1] - pa[1]));
+    for (let k = 0; k <= pasos; k++) {
+      const px = pa[0] + redondoPy((pb[0] - pa[0]) * k / pasos), py = pa[1] + redondoPy((pb[1] - pa[1]) * k / pasos);
+      const c = Math.floor(px / 2), f = Math.floor(py / 4);
+      if ((c === fin[0] && f === fin[1]) || (c === ini[0] && f === ini[1] && (c === cx0 || f === cy0))) continue;
+      const cod = celdas[f][c][0].codePointAt(0), bits = cod >= 0x2800 && cod <= 0x28ff ? cod - 0x2800 : 0;
+      celdas[f][c] = [String.fromCodePoint(0x2800 | bits | BITS_BRAILLE[modPy(px, 2)][modPy(py, 4)]), color];
+    }
+    return fin;
+  }
   // flechas: [nombre, desde, hasta, color]
-  function vectoresArte(flechas, ancho = 41, alto = 17, cuadricula = true) {
+  function vectoresArte(flechas, ancho = 41, alto = 17, cuadricula = true, estilo = "fino") {
     if (ancho < 12 || alto < 6) throw errorPy("ValueError", "dibujar_vectores: es muy pequeño. Ponle por lo menos ancho=12 y alto=6");
     const xs = [0], ys = [0];
     flechas.forEach(([, a, b]) => { xs.push(a[0], b[0]); ys.push(a[1], b[1]); });
@@ -4989,7 +5021,7 @@ const Docs = (() => {
     const cols = redondoPy((x1 - x0) * 2 * escala) + 1, filas = redondoPy((y1 - y0) * escala) + 1;
     const celda = (px, py) => [(px - x0) * 2 * escala, (y1 - py) * escala];
     const celdas = Array.from({ length: filas }, () => Array.from({ length: cols }, () => [" ", null]));
-    const [cx0, cy0] = celda(0, 0).map(redondoPy);
+    const [cx0, cy0] = celda(0, 0).map(redondoPy), mover = [celda(0, 0)[0] - cx0, celda(0, 0)[1] - cy0];
     if (cuadricula && escala >= 1)
       for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) { const [c, f] = celda(gx, gy).map(redondoPy); celdas[f][c] = ["·", "gris"]; }
     for (let c = 0; c < cols; c++) celdas[cy0][c] = ["─", "gris"];
@@ -4997,21 +5029,11 @@ const Docs = (() => {
     const puntas = [];
     flechas.forEach(([nombre, desde, hasta, color]) => {
       const [ax, ay] = celda(...desde), [bx, by] = celda(...hasta);
-      const [ca, fa, cb, fb] = [ax, ay, bx, by].map(redondoPy);
-      const pasos = Math.max(1, Math.abs(cb - ca), Math.abs(fb - fa)), camino = [];
-      for (let k = 0; k <= pasos; k++) {
-        const p = [ca + redondoPy((cb - ca) * k / pasos), fa + redondoPy((fb - fa) * k / pasos)], u = camino[camino.length - 1];
-        if (!u || u[0] !== p[0] || u[1] !== p[1]) camino.push(p);
-      }
-      for (let i = 0; i + 1 < camino.length; i++) {
-        const [c, f] = camino[i], [c2, f2] = camino[i + 1];
-        if (i === 0 && (c === cx0 || f === cy0)) continue;
-        const dc = c2 - c, df = f2 - f;
-        celdas[f][c] = [df === 0 ? "─" : dc === 0 ? "│" : dc * df < 0 ? "╱" : "╲", color];
-      }
+      const fin = estilo === "fino" ? rayaFina(celdas, ax - mover[0], ay - mover[1], bx - mover[0], by - mover[1], cx0, cy0, color)
+        : rayaGruesa(celdas, ax, ay, bx, by, cx0, cy0, color);
       const ang = Math.atan2(-(by - ay) * 2, bx - ax) * (180 / Math.PI);
       const punta = bx === ax && by === ay ? "•" : FLECHAS_V[modPy(redondoPy(ang / 45), 8)];
-      puntas.push([camino[camino.length - 1], punta, color, nombre, bx - ax]);
+      puntas.push([fin, punta, color, nombre, bx - ax]);
     });
     puntas.forEach(([[c, f], punta, color]) => { celdas[f][c] = [punta, color]; });
     puntas.forEach(([[c, f], , color, nombre, dx]) => {
@@ -5797,12 +5819,12 @@ const Docs = (() => {
     },
     dibujar_vectores: {
       nuevo: true, cat: "vectores", titulo: "pantalla.dibujar_vectores()",
-      desc: "Dibuja vectores con flechas en unos ejes, cada uno de un color. Los ejes se ajustan solos. Mueve u y v, o pon v en la punta de u para ver la suma.",
+      desc: "Dibuja vectores con flechas en unos ejes, cada uno de un color. Las rayas van con puntitos braille para que salgan casi rectas (estilo=\"rayas\" las hace con ╱ ╲). Mueve u y v, o pon v en la punta de u.",
       p: [{ k: "ux", t: "rango", v: 3, min: -8, max: 8, label: "u: x" }, { k: "uy", t: "rango", v: 2, min: -8, max: 8, label: "u: y" },
         { k: "vx", t: "rango", v: -1, min: -8, max: 8, label: "v: x" }, { k: "vy", t: "rango", v: 3, min: -8, max: 8, label: "v: y" },
         { k: "v sale de", t: "sel", v: "el origen", ops: ["el origen", "la punta de u"] }, { k: "u+v", t: "check", v: true },
         { k: "ancho", t: "rango", v: 41, min: 12, max: 60 }, { k: "alto", t: "rango", v: 13, min: 6, max: 20 },
-        { k: "cuadricula", t: "check", v: true }],
+        { k: "estilo", t: "sel", v: "fino", ops: ["fino", "rayas"] }, { k: "cuadricula", t: "check", v: true }],
       alto: 13,
       vista: p => {
         const u = [p.ux, p.uy], v = [p.vx, p.vy], suma = [p.ux + p.vx, p.uy + p.vy], punta = p["v sale de"] === "la punta de u";
@@ -5811,9 +5833,9 @@ const Docs = (() => {
         const dic = "{" + [`"u": ${tuplaPy(u)}`, `"v": ${punta ? `(${tuplaPy(u)}, ${tuplaPy(suma)})` : tuplaPy(v)}`]
           .concat(p["u+v"] ? [`"u+v": ${tuplaPy(suma)}`] : []).join(", ") + "}";
         const codigo = "vectores = " + dic + "\n" + llamada("dibujar_vectores", [{ crudo: "vectores" }], [["ancho", p.ancho === 41 ? null : p.ancho], ["alto", p.alto === 17 ? null : p.alto],
-          ["cuadricula", p.cuadricula ? null : { crudo: "False" }]]);
+          ["cuadricula", p.cuadricula ? null : { crudo: "False" }], ["estilo", p.estilo === "fino" ? null : p.estilo]]);
         let g;
-        try { g = vectoresArte(flechas, p.ancho, p.alto, p.cuadricula); }
+        try { g = vectoresArte(flechas, p.ancho, p.alto, p.cuadricula, p.estilo); }
         catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: 6, codigo, res: res("lanza", e.tipo) }; }
         return { elementos: [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }], ancho: Math.max(30, g.ancho), alto: g.alto, codigo,
           res: res("devuelve", `(${g.ancho}, ${g.alto})`) };

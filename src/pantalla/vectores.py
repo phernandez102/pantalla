@@ -516,7 +516,54 @@ def _leer_flechas(vectores):
     return flechas
 
 
-def dibujar_vectores(vectores, x=None, y=None, ancho=41, alto=17, colores=None, cuadricula=True):
+def _raya_gruesa(celdas, ax, ay, bx, by, cx0, cy0, cod):
+    # un paso por casilla en la dirección más larga, para que la raya no haga escalones
+    ca, fa, cb, fb = [int(round(n)) for n in (ax, ay, bx, by)]
+    pasos = max(1, abs(cb - ca), abs(fb - fa))
+    camino = []
+    for k in range(pasos + 1):
+        p = (ca + int(round((cb - ca) * k / pasos)), fa + int(round((fb - fa) * k / pasos)))
+        if not camino or camino[-1] != p:
+            camino.append(p)
+    for i, ((c, f), (c2, f2)) in enumerate(zip(camino, camino[1:])):
+        # si sale de los ejes, el ┼ (o la raya del eje) se queda
+        if i == 0 and (c == cx0 or f == cy0):
+            continue
+        dc, df = c2 - c, f2 - f
+        celdas[f][c] = ("─" if df == 0 else "│" if dc == 0 else "╱" if dc * df < 0 else "╲", cod)
+    return camino[-1]
+
+
+# en braille cada letra tiene 2 columnas y 4 filas de puntos, y cada punto es un bit
+_BRAILLE = {(0, 0): 0x01, (0, 1): 0x02, (0, 2): 0x04, (0, 3): 0x40,
+            (1, 0): 0x08, (1, 1): 0x10, (1, 2): 0x20, (1, 3): 0x80}
+
+
+def _raya_fina(celdas, ax, ay, bx, by, cx0, cy0, cod, mover):
+    # se pasa a puntos (8 veces más que letras) y se hace la raya ahí.
+    # se mueve un poco para que el 0 caiga en el centro del ┼, que está redondeado
+    ax, bx, ay, by = ax - mover[0], bx - mover[0], ay - mover[1], by - mover[1]
+    cols, filas = len(celdas[0]), len(celdas)
+
+    def punto(c, f):
+        return (min(max(int(math.floor(c * 2 + 1)), 0), cols * 2 - 1),
+                min(max(int(math.floor(f * 4 + 2)), 0), filas * 4 - 1))
+    pa, pb = punto(ax, ay), punto(bx, by)
+    inicio, fin_ = (pa[0] // 2, pa[1] // 4), (pb[0] // 2, pb[1] // 4)
+    pasos = max(1, abs(pb[0] - pa[0]), abs(pb[1] - pa[1]))
+    for k in range(pasos + 1):
+        px = pa[0] + int(round((pb[0] - pa[0]) * k / pasos))
+        py = pa[1] + int(round((pb[1] - pa[1]) * k / pasos))
+        c, f = px // 2, py // 4
+        if (c, f) == fin_ or ((c, f) == inicio and (c == cx0 or f == cy0)):
+            continue
+        letra = celdas[f][c][0]
+        bits = ord(letra) - 0x2800 if "⠀" <= letra <= "⣿" else 0
+        celdas[f][c] = (chr(0x2800 | bits | _BRAILLE[(px % 2, py % 4)]), cod)
+    return fin_
+
+
+def dibujar_vectores(vectores, x=None, y=None, ancho=41, alto=17, colores=None, cuadricula=True, estilo="fino"):
     """Dibuja vectores con flechas en unos ejes, cada uno de un color.
 
         pantalla.dibujar_vectores({"u": (3, 2), "v": (-1, 4)})
@@ -526,12 +573,16 @@ def dibujar_vectores(vectores, x=None, y=None, ancho=41, alto=17, colores=None, 
     Un vector puede ser (x, y), que sale del origen, o ((x0, y0), (x1, y1)): de un punto a otro.
     - ancho, alto: lo que ocupa como mucho, contando los números de los ejes.
     - cuadricula=False: sin los puntitos de cada unidad.
+    - estilo="fino" hace las rayas con puntitos braille (⠁⠂⠄⡀), que dejan 8 puntos por letra
+      y salen casi rectas. estilo="rayas" las hace con ╱ ╲ │ ─, por si tu terminal no tiene braille.
     Sin x ni y, se dibuja donde esté el cursor (como un print). Devuelve (ancho, alto).
     """
     ancho = _entero(ancho, "ancho", "dibujar_vectores")
     alto = _entero(alto, "alto", "dibujar_vectores")
     if ancho < 12 or alto < 6:
         raise ValueError("dibujar_vectores: es muy pequeño. Ponle por lo menos ancho=12 y alto=6")
+    if estilo not in ("fino", "rayas"):
+        raise ValueError("dibujar_vectores: estilo puede ser \"fino\" o \"rayas\", y me has dado %r" % (estilo,))
     flechas = _leer_flechas(vectores)
     xs = [0.0] + [p[0] for _, a, b in flechas for p in (a, b)]
     ys = [0.0] + [p[1] for _, a, b in flechas for p in (a, b)]
@@ -550,6 +601,7 @@ def dibujar_vectores(vectores, x=None, y=None, ancho=41, alto=17, colores=None, 
     gris = _estilo_ansi("gris")
     celdas = [[(" ", None)] * cols for _ in range(filas)]
     cx0, cy0 = [int(round(c)) for c in celda(0, 0)]
+    mover = (celda(0, 0)[0] - cx0, celda(0, 0)[1] - cy0)
     if cuadricula and escala >= 1:
         for gx in range(x0, x1 + 1):
             for gy in range(y0, y1 + 1):
@@ -566,25 +618,14 @@ def dibujar_vectores(vectores, x=None, y=None, ancho=41, alto=17, colores=None, 
             colores[i % len(colores)] if colores else _COLORES[i % len(_COLORES)])
         cod = _estilo_ansi(color)
         (ax, ay), (bx, by) = celda(*desde), celda(*hasta)
-        # un paso por casilla en la dirección más larga, para que la raya no haga escalones
-        ca, fa, cb, fb = [int(round(n)) for n in (ax, ay, bx, by)]
-        pasos = max(1, abs(cb - ca), abs(fb - fa))
-        camino = []
-        for k in range(pasos + 1):
-            p = (ca + int(round((cb - ca) * k / pasos)), fa + int(round((fb - fa) * k / pasos)))
-            if not camino or camino[-1] != p:
-                camino.append(p)
-        for i, ((c, f), (c2, f2)) in enumerate(zip(camino, camino[1:])):
-            # si sale de los ejes, el ┼ (o la raya del eje) se queda
-            if i == 0 and (c == cx0 or f == cy0):
-                continue
-            dc, df = c2 - c, f2 - f
-            ch = "─" if df == 0 else "│" if dc == 0 else "╱" if dc * df < 0 else "╲"
-            celdas[f][c] = (ch, cod)
+        if estilo == "fino":
+            fin_ = _raya_fina(celdas, ax, ay, bx, by, cx0, cy0, cod, mover)
+        else:
+            fin_ = _raya_gruesa(celdas, ax, ay, bx, by, cx0, cy0, cod)
         # la punta, mirando hacia donde va (en la pantalla una fila es el doble de alta)
         ang = math.degrees(math.atan2(-(by - ay) * 2, bx - ax))
         punta = "•" if (bx, by) == (ax, ay) else _FLECHAS[int(round(ang / 45)) % 8]
-        puntas.append((camino[-1], punta, cod, nombre, bx - ax))
+        puntas.append((fin_, punta, cod, nombre, bx - ax))
 
     for (c, f), punta, cod, _, _ in puntas:
         celdas[f][c] = (punta, cod)

@@ -499,8 +499,11 @@ print(abs(u))         # el módulo: 3.605551275464
 
 pantalla.dibujar_vectores({"u": u, "v": v, "u+v": u + v})      # con flechas, cada uno de un color
 pantalla.dibujar_vectores({"u": u, "v": ((3, 2), (2, 5))})      # v empieza en la punta de u
+pantalla.dibujar_vectores([u, v], estilo="rayas")              # con ╱ ╲ │ ─ en vez de braille
 u = pantalla.pedir_vector("u", dimension=3)                     # como pedir_matriz, pero en una fila
 ```
+
+Las rayas se hacen con puntitos braille (`⠁⠂⠄⡀`): cada letra tiene 2×4 puntos, así que salen casi rectas aunque vayan torcidas. Si tu terminal no tiene esa letra, `estilo="rayas"` las dibuja como antes.
 
 Un `Vector` es una tupla, así que vale para todo lo que acepta una tupla (`x, y = u`, `u[0]`, `len(u)`). Las funciones también aceptan tuplas y listas normales, y las cuentas van con fracciones exactas como las matrices. Para meterlo en un texto usa un f-string: `f"u = {u}"`.
 
