@@ -15,6 +15,8 @@ from .terminal import _entero, _fin_de_estilo
 
 
 _COLORES = ["cian", "amarillo", "verde claro", "morado claro", "rojo claro", "azul claro"]
+# el bit de cada punto braille, por [columna][fila]
+_BRAILLE = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]]
 
 
 def _texto_corto(n):
@@ -77,7 +79,7 @@ def _rango_y(valores, minimo, maximo):
 
 
 def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, color=None,
-            minimo=None, maximo=None, caracter="•", ejes=True):
+            minimo=None, maximo=None, caracter=None, ejes=True, estilo="fino"):
     """Dibuja la gráfica de una función, con sus ejes.
 
         pantalla.grafica(lambda x: x * x, -5, 5)              # y = x² entre x = -5 y x = 5
@@ -92,6 +94,8 @@ def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, col
 
     - minimo, maximo: hasta dónde llega el eje y (si no, se ajusta solo).
     - ancho, alto: lo que ocupa en la pantalla, contando los números de los lados.
+    - estilo="fino" dibuja con puntitos braille (2x4 por letra), así la curva sale suave.
+      estilo="puntos" la hace con • (o con el caracter que le digas), como en las versiones de antes.
     Los puntos donde la función no existe (como 1/x en x = 0) se dejan en blanco.
     Sin x ni y, se dibuja donde esté el cursor (como un print).
     """
@@ -99,6 +103,15 @@ def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, col
     alto = _entero(alto, "alto", "grafica")
     if ancho < 12 or alto < 4:
         raise ValueError("grafica: es muy pequeña. Ponle por lo menos ancho=12 y alto=4")
+    if estilo not in ("fino", "puntos"):
+        raise ValueError("grafica: estilo puede ser \"fino\" o \"puntos\", y me has dado %r" % (estilo,))
+    if caracter is not None:
+        estilo = "puntos"
+    else:
+        caracter = "•"
+    fino = estilo == "fino"
+    # en braille cada letra tiene 2 puntos de ancho y 4 de alto
+    por_x, por_y = (2, 4) if fino else (1, 1)
 
     if isinstance(funcion, (list, tuple)) and funcion and all(callable(f) for f in funcion):
         funciones = list(funcion)
@@ -129,7 +142,8 @@ def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, col
     ancho_numeros = 1
     for _ in range(2):
         ancho_dibujo = ancho - ancho_numeros - 1
-        xs = [desde + (hasta - desde) * i / max(1, ancho_dibujo - 1) for i in range(ancho_dibujo)]
+        muestras = ancho_dibujo * por_x
+        xs = [desde + (hasta - desde) * i / max(1, muestras - 1) for i in range(muestras)]
         if datos is not None:
             serie = []
             for xv in xs:
@@ -152,21 +166,32 @@ def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, col
             break
         ancho_numeros = nuevo
 
+    alto_puntos = alto_dibujo * por_y
+
     def fila_de(v):
-        return int(round((arriba - v) / (arriba - bajo) * (alto_dibujo - 1)))
+        return int(round((arriba - v) / (arriba - bajo) * (alto_puntos - 1)))
 
     celdas = [[(" ", None)] * ancho_dibujo for _ in range(alto_dibujo)]
     gris = _estilo_ansi("gris")
-    fila_cero = fila_de(0) if bajo <= 0 <= arriba else None
+    fila_cero = fila_de(0) // por_y if bajo <= 0 <= arriba else None
     col_cero = None
     if desde <= 0 <= hasta and datos is None:
-        col_cero = int(round(-desde / (hasta - desde) * (ancho_dibujo - 1)))
+        col_cero = int(round(-desde / (hasta - desde) * (muestras - 1))) // por_x
     if ejes:
         if fila_cero is not None:
             celdas[fila_cero] = [("─", gris)] * ancho_dibujo
         if col_cero is not None:
             for f in range(alto_dibujo):
                 celdas[f][col_cero] = ("┼" if f == fila_cero else "│", gris)
+
+    puntos = {}
+
+    def poner(c, f, cod):
+        if fino:
+            bits = puntos.get((f // 4, c // 2), (0, None))[0] | _BRAILLE[c % 2][f % 4]
+            puntos[(f // 4, c // 2)] = (bits, cod)
+        else:
+            celdas[f][c] = (caracter, cod)
 
     for s, serie in enumerate(series):
         cod = _estilo_ansi(color if (color and len(series) == 1) else _COLORES[s % len(_COLORES)])
@@ -176,15 +201,16 @@ def grafica(funcion, desde=-10, hasta=10, x=None, y=None, ancho=50, alto=15, col
                 anterior = None
                 continue
             f = fila_de(v)
-            celdas[f][c] = (caracter, cod)
+            poner(c, f, cod)
             # si de una columna a la siguiente da un salto, rellenamos para que se vea seguida
             if anterior is not None and abs(f - anterior) > 1:
                 paso = 1 if f > anterior else -1
                 mitad = (anterior + f) // 2
                 for g in range(anterior + paso, f, paso):
-                    columna = c - 1 if (g - mitad) * paso <= 0 else c
-                    celdas[g][columna] = (caracter, cod)
+                    poner(c - 1 if (g - mitad) * paso <= 0 else c, g, cod)
             anterior = f
+    for (f, c), (bits, cod) in puntos.items():
+        celdas[f][c] = (chr(0x2800 + bits), cod)
 
     fin = _fin_de_estilo()
     lineas = []

@@ -17,12 +17,15 @@ Escribe pantalla.ayuda() para ver todo lo que se puede hacer.
 """
 
 from .arte import CODIGOS_COLOR, arte
+from .bases import a_binario, a_decimal, a_hexadecimal, cambiar_base
 from .colores import colorear, lista_colores, poner_color, quitar_color
 from .cargas import PantallaDeCarga, pantalla_de_carga
 from .componentes import (barra_progreso, cabecera, calculando, cargando, elegir, elegir_varios,
                           formulario, lista_barras, mensaje, menu, pie, tabla)
 from .dibujo import ESTILOS, caja, linea, linea_vertical, punto, rellenar, rodear
 from .disenos import diseno
+from .estadistica import (cuartiles, desviacion, estadisticas, histograma, media, mediana, moda,
+                          tabla_frecuencias, varianza)
 from .graficas import barras, grafica, minigrafica
 from .herramientas import depurar, regla
 from .juego import Sprite, cada, fotograma, jugar, pulsada, sprites
@@ -34,6 +37,13 @@ from .matrices import (clasificar_sistema, determinante, escalonar, identidad, i
                        restar_matrices, sumar_matrices, transpuesta, traza)
 from .numeros import (Fraccion, calcular, descomponer, divisores, es_primo, escribir_cuenta, factorizar,
                       fraccion, mcd, mcm, pedir_fraccion)
+from .polinomios import (Polinomio, dividir_polinomios, ecuacion_segundo_grado, factorizar_polinomio,
+                         polinomio, raices, ruffini)
+from .ejercicios import lista_temas, practicar
+from .records import (Cronometro, cronometro, cuenta_atras, guardar_record, leer_records, mejor_record,
+                      tabla_records)
+from .rectas import (Recta, angulo_rectas, distancia_punto_recta, ecuaciones_recta, interseccion_rectas,
+                     posicion_rectas, recta)
 from .spinners import Spinner, lista_spinners, spinner
 from .vectores import (Vector, angulo, dibujar_vectores, distancia, modulo, multiplicar_vector, pedir_vector,
                        producto_escalar, producto_mixto, producto_vectorial, proyeccion, restar_vectores,
@@ -46,7 +56,7 @@ from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, i
                        terminar, titulo_ventana, volver_a_posicion)
 from .texto import centrar, escribir, escribir_derecha, escribir_lento
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .terminal import _abrir_en_consola_si_idle as _abrir
 
@@ -69,6 +79,8 @@ _GRUPOS = [
     ("Barras y pantallas de carga", ["barra_progreso", "lista_barras", "pantalla_de_carga", "cargando",
                                      "calculando", "spinner", "lista_spinners"]),
     ("Juegos", ["jugar", "Sprite", "sprites", "cada", "fotograma", "pulsada"]),
+    ("Récords y tiempo", ["guardar_record", "leer_records", "mejor_record", "tabla_records", "cronometro",
+                          "Cronometro", "cuenta_atras"]),
     ("Matrices", ["matriz", "pedir_matriz", "sumar_matrices", "restar_matrices", "multiplicar_matrices",
                   "transpuesta", "identidad", "traza", "determinante", "inversa", "rango",
                   "potencia_matriz", "escalonar", "resolver_sistema", "clasificar_sistema"]),
@@ -76,9 +88,17 @@ _GRUPOS = [
                   "multiplicar_vector", "producto_escalar", "producto_vectorial", "producto_mixto", "modulo",
                   "unitario", "distancia", "angulo", "proyeccion", "son_paralelos", "son_perpendiculares",
                   "son_independientes", "dibujar_vectores"]),
+    ("Rectas", ["recta", "Recta", "ecuaciones_recta", "posicion_rectas", "interseccion_rectas",
+                "distancia_punto_recta", "angulo_rectas"]),
+    ("Polinomios", ["polinomio", "Polinomio", "ruffini", "dividir_polinomios", "raices", "factorizar_polinomio",
+                    "ecuacion_segundo_grado"]),
     ("Fracciones y números", ["fraccion", "pedir_fraccion", "calcular", "escribir_cuenta", "mcd", "mcm",
-                              "es_primo", "divisores", "factorizar", "descomponer"]),
+                              "es_primo", "divisores", "factorizar", "descomponer", "cambiar_base",
+                              "a_binario", "a_hexadecimal", "a_decimal"]),
+    ("Estadística", ["media", "mediana", "moda", "varianza", "desviacion", "cuartiles", "tabla_frecuencias",
+                     "histograma", "estadisticas"]),
     ("Gráficas", ["grafica", "barras", "minigrafica"]),
+    ("Practicar", ["practicar", "lista_temas"]),
     ("Ratón", ["activar_raton", "desactivar_raton", "esperar_clic", "leer_raton",
                "posicion_raton", "zona", "boton", "botones", "bucle"]),
     ("Diseñar y ver posiciones", ["diseno", "regla", "depurar"]),
@@ -107,7 +127,7 @@ _PARECIDAS = {
     "maximo_comun_divisor": "mcd", "minimo_comun_multiplo": "mcm", "gcd": "mcd", "lcm": "mcm",
     "primo": "es_primo", "primos": "es_primo", "factores": "factorizar", "descomposicion": "descomponer",
     "dibujar_funcion": "grafica", "funcion": "grafica", "grafico": "grafica", "plot": "grafica",
-    "barra_grafica": "barras", "histograma": "barras", "sparkline": "minigrafica",
+    "barra_grafica": "barras", "sparkline": "minigrafica",
     "checkbox": "elegir_varios", "marcar": "elegir_varios", "casillas": "elegir_varios",
     "formularios": "formulario", "pedir_datos": "formulario", "pedir_varios": "formulario",
     "loading": "pantalla_de_carga", "pantalla_carga": "pantalla_de_carga", "carga": "pantalla_de_carga",
@@ -120,6 +140,21 @@ _PARECIDAS = {
     "vector_unitario": "unitario", "normalizar": "unitario", "dibujar_vector": "dibujar_vectores",
     "flechas": "dibujar_vectores", "independientes": "son_independientes", "perpendiculares": "son_perpendiculares",
     "paralelos": "son_paralelos", "ortogonales": "son_perpendiculares",
+    "polinomios": "polinomio", "segundo_grado": "ecuacion_segundo_grado", "ecuacion_cuadratica": "ecuacion_segundo_grado",
+    "discriminante": "ecuacion_segundo_grado", "cuadratica": "ecuacion_segundo_grado", "raiz": "raices",
+    "ceros": "raices", "soluciones": "raices", "dividir_polinomio": "dividir_polinomios",
+    "division_polinomios": "dividir_polinomios", "factorizar_polinomios": "factorizar_polinomio",
+    "promedio": "media", "media_aritmetica": "media", "mean": "media", "average": "media", "median": "mediana",
+    "mode": "moda", "desviacion_tipica": "desviacion", "desviacion_estandar": "desviacion", "std": "desviacion",
+    "frecuencias": "tabla_frecuencias", "tabla_de_frecuencias": "tabla_frecuencias", "cuartil": "cuartiles",
+    "resumen": "estadisticas", "estadistica": "estadisticas", "binario": "a_binario", "hexadecimal": "a_hexadecimal",
+    "decimal": "a_decimal", "base": "cambiar_base", "cambio_de_base": "cambiar_base", "hex": "a_hexadecimal",
+    "rectas": "recta", "ecuacion_recta": "ecuaciones_recta", "interseccion": "interseccion_rectas",
+    "corte": "interseccion_rectas", "distancia_recta": "distancia_punto_recta",
+    "examen": "practicar", "quiz": "practicar", "temas": "lista_temas",
+    "record": "guardar_record", "records": "leer_records", "puntuacion": "guardar_record",
+    "puntuaciones": "leer_records", "highscore": "guardar_record", "temporizador": "cronometro",
+    "reloj": "cronometro", "timer": "cronometro", "tiempo": "cronometro", "countdown": "cuenta_atras",
 }
 
 

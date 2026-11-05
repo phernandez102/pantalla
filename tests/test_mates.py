@@ -193,6 +193,10 @@ class TestEnteros(Base):
             pantalla.factorizar(1)
 
 
+def es_braille(ch):
+    return 0x2800 < ord(ch) <= 0x28ff
+
+
 class TestGraficas(Base):
     ANCHO = 80
     ALTO = 30
@@ -201,15 +205,15 @@ class TestGraficas(Base):
         salida = sin_colores(self.captura(pantalla.grafica, lambda x: x * x, -5, 5, ancho=41, alto=11))
         lineas = salida.rstrip("\n").split("\n")
         self.assertEqual(len(lineas), 11)
-        self.assertTrue(lineas[0].startswith("25 •"))
-        self.assertTrue(lineas[0].endswith("•"))
+        self.assertTrue(lineas[0].startswith("25 ") and es_braille(lineas[0][3]), lineas[0])
+        self.assertTrue(es_braille(lineas[0][-1]))
         self.assertTrue(lineas[-2].startswith(" 0 "))
         self.assertTrue(lineas[-1].strip().startswith("-5"))
         self.assertTrue(lineas[-1].endswith("5"))
 
     def test_grafica_varias_y_huecos(self):
         salida = self.captura(pantalla.grafica, [math.sin, lambda x: 1 / x], -3, 3, ancho=30, alto=8)
-        self.assertIn("•", salida)
+        self.assertTrue(any(es_braille(ch) for ch in salida))
         salida = sin_colores(self.captura(pantalla.grafica, [3, 5, 2, 8], ancho=30, alto=8))
         self.assertTrue(salida.startswith("8 "))
         with self.assertRaises(ValueError):
@@ -219,8 +223,22 @@ class TestGraficas(Base):
 
     def test_grafica_en_un_sitio(self):
         p = self.pinta(pantalla.grafica, lambda x: x, -1, 1, 10, 5, ancho=20, alto=6)
-        self.assertIn("•", p.linea(5))
+        self.assertTrue(any(es_braille(ch) for ch in p.linea(5)))
         self.assertEqual(p.linea(4).strip(), "")
+
+    def test_grafica_estilos(self):
+        antes = sin_colores(self.captura(pantalla.grafica, lambda x: x * x, -5, 5, ancho=41, alto=11, estilo="puntos"))
+        self.assertTrue(antes.startswith("25 •"))
+        self.assertFalse(any(es_braille(ch) for ch in antes))
+        # con caracter= se dibuja como antes, para no romper programas viejos
+        con_x = sin_colores(self.captura(pantalla.grafica, lambda x: x * x, -5, 5, ancho=41, alto=11, caracter="x"))
+        self.assertTrue(con_x.startswith("25 x"))
+        # el eje sale en su sitio aunque la curva lo pise
+        fino = sin_colores(self.captura(pantalla.grafica, lambda x: x * x - 4, -4, 4, ancho=44, alto=12))
+        self.assertIn("┼", fino)
+        self.assertTrue(fino.splitlines()[8].startswith(" 0 ─"))
+        with self.assertRaises(ValueError):
+            pantalla.grafica(math.sin, estilo="gordo")
 
     def test_barras(self):
         salida = sin_colores(self.captura(pantalla.barras, {"Ana": 10, "Luis": 5}, ancho=20))

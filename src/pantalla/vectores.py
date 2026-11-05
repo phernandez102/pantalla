@@ -558,7 +558,7 @@ def _raya_fina(celdas, ax, ay, bx, by, cx0, cy0, cod, mover):
         if (c, f) == fin_ or ((c, f) == inicio and (c == cx0 or f == cy0)):
             continue
         letra = celdas[f][c][0]
-        bits = ord(letra) - 0x2800 if "⠀" <= letra <= "⣿" else 0
+        bits = ord(letra) - 0x2800 if 0x2800 <= ord(letra) <= 0x28ff else 0
         celdas[f][c] = (chr(0x2800 | bits | _BRAILLE[(px % 2, py % 4)]), cod)
     return fin_
 

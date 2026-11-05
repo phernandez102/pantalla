@@ -1,5 +1,19 @@
 # Cambios
 
+## 0.6.0
+
+- Polinomios: `Polinomio` y `polinomio("2x^3 - 3x + 1")`, que se suman, restan, multiplican, se evalúan con `p(2)` y tienen `derivada()`. `dividir_polinomios()`, `ruffini()` (con `pasos=True` dibuja la tabla), `raices()` y `factorizar_polinomio()`, que con `pasos=True` hace un Ruffini por cada raíz.
+- `ecuacion_segundo_grado(a, b, c, pasos=True)` escribe el discriminante y la fórmula con los números puestos.
+- Rectas: `Recta` y `recta()` por dos puntos, punto y vector, punto y pendiente o escrita (`"y = 2x + 1"`). Saca la ecuación general, explícita, punto-pendiente, vectorial, paramétricas y continua. `ecuaciones_recta()`, `posicion_rectas()`, `interseccion_rectas()`, `angulo_rectas()` y `distancia_punto_recta()`.
+- Estadística: `media()`, `mediana()`, `moda()`, `varianza()`, `desviacion()`, `cuartiles()`, `tabla_frecuencias()` (también por intervalos), `histograma()` y `estadisticas()`.
+- Cambios de base: `cambiar_base()`, `a_binario()`, `a_hexadecimal()` y `a_decimal()`, con `pasos=True` las divisiones entre la base o la suma de potencias.
+- `practicar()`: ejercicios de tablas, sumas, divisiones, fracciones, potencias, raíces, ecuaciones, mcd, primos, binario, porcentajes y vectores, en tres niveles. Corrige cada respuesta y al final pone la nota.
+- Para los juegos: `guardar_record()`, `leer_records()`, `mejor_record()` y `tabla_records()` guardan las puntuaciones en un archivo. `cronometro()` y `cuenta_atras()`.
+- `grafica()` dibuja la línea con puntitos braille y sale mucho más fina. Con `estilo="puntos"` sale como antes.
+- La demo tiene un apartado de mates con polinomios, estadística y practicar.
+- En la documentación web están todas las funciones nuevas, y las de polinomios, rectas, estadística y bases tienen deslizadores.
+- Ejemplos nuevos: 19 a 22.
+
 ## 0.5.0
 
 - Vectores: `Vector` (una tupla que suma, resta y se multiplica por un número con `+`, `-`, `*` y `/`), `vector()` para escribirlo y `pedir_vector()` para pedirlo con las flechas.

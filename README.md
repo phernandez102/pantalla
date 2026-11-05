@@ -19,7 +19,7 @@
 
 <br>
 
-**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, barras, spinners y pantallas de carga para las tareas largas, y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, vectores, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
+**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, barras, spinners y pantallas de carga para las tareas largas, y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, vectores, rectas, polinomios con Ruffini, estadística, fracciones exactas, sistemas por Gauss y gráficas de funciones, casi todo con sus pasos como en el cuaderno, y `practicar()` para hacer ejercicios y que te corrija. Todo en español.
 
 <table>
 <tr>
@@ -102,7 +102,7 @@ La pantalla es una cuadrícula de letras. `x` es la columna (hacia la derecha) e
 
 ## Todo lo que hay
 
-[Pantalla y cursor](https://github.com/phernandez102/pantalla#pantalla-y-cursor) · [Escribir](https://github.com/phernandez102/pantalla#escribir) · [Colores](https://github.com/phernandez102/pantalla#colores) · [Dibujar](https://github.com/phernandez102/pantalla#dibujar) · [Teclado](https://github.com/phernandez102/pantalla#teclado) · [Cosas ya hechas](https://github.com/phernandez102/pantalla#cosas-ya-hechas) · [Barras y pantallas de carga](https://github.com/phernandez102/pantalla#barras-y-pantallas-de-carga) · [Ratón](https://github.com/phernandez102/pantalla#ratón) · [Matrices](https://github.com/phernandez102/pantalla#matrices) · [Vectores](https://github.com/phernandez102/pantalla#vectores) · [Fracciones y números](https://github.com/phernandez102/pantalla#fracciones-y-números) · [Gráficas](https://github.com/phernandez102/pantalla#gráficas)
+[Pantalla y cursor](https://github.com/phernandez102/pantalla#pantalla-y-cursor) · [Escribir](https://github.com/phernandez102/pantalla#escribir) · [Colores](https://github.com/phernandez102/pantalla#colores) · [Dibujar](https://github.com/phernandez102/pantalla#dibujar) · [Teclado](https://github.com/phernandez102/pantalla#teclado) · [Cosas ya hechas](https://github.com/phernandez102/pantalla#cosas-ya-hechas) · [Barras y pantallas de carga](https://github.com/phernandez102/pantalla#barras-y-pantallas-de-carga) · [Ratón](https://github.com/phernandez102/pantalla#ratón) · [Matrices](https://github.com/phernandez102/pantalla#matrices) · [Vectores](https://github.com/phernandez102/pantalla#vectores) · [Rectas](https://github.com/phernandez102/pantalla#rectas) · [Polinomios](https://github.com/phernandez102/pantalla#polinomios) · [Fracciones y números](https://github.com/phernandez102/pantalla#fracciones-y-números) · [Estadística](https://github.com/phernandez102/pantalla#estadística) · [Gráficas](https://github.com/phernandez102/pantalla#gráficas) · [Practicar](https://github.com/phernandez102/pantalla#practicar) · [Récords y tiempo](https://github.com/phernandez102/pantalla#récords-y-tiempo)
 
 `pantalla.ayuda()` abre un menú con todas, y si escribes mal un nombre el error te dice cuál querías.
 
@@ -535,6 +535,66 @@ u × v = │ 1  2  3 │ = (2·6 - 3·5, 3·4 - 1·6, 1·5 - 2·4) = (-3, 6, -3)
         │ 4  5  6 │
 ```
 
+### Rectas
+
+```python
+r = pantalla.recta((1, 3), (2, 5))           # por dos puntos
+r = pantalla.recta((1, 3), vector=(1, 2))    # por un punto y un vector
+r = pantalla.recta((0, 1), pendiente="1/2")  # por un punto y la pendiente
+r = pantalla.recta("y = 2x + 1")             # escrita, también "2x - y + 1 = 0" o "x = 3"
+
+print(r)                     # 2x - y + 1 = 0
+r.explicita()                # y = 2x + 1
+r.punto_pendiente()          # y - 3 = 2(x - 1)
+r.vectorial()                # (x, y) = (1, 3) + t·(1, 2)
+r.parametricas()             # x = 1 + t,  y = 3 + 2t
+r.continua()                 # (x - 1)/1 = (y - 3)/2
+r.pendiente, r.ordenada      # 2, 1
+r(4)                         # 9, la y cuando x = 4 (así se puede pasar a grafica())
+r.pasa_por((0, 1))           # True
+```
+
+`pantalla.ecuaciones_recta((1, 3), (2, 5))` escribe todas las ecuaciones una debajo de otra. Para dos rectas:
+
+```python
+pantalla.posicion_rectas("y = 2x", "y = 2x + 1")             # "paralelas" (o "secantes", "coincidentes")
+pantalla.interseccion_rectas("y = 2x + 1", "x + y = 4")      # (1, 3)
+pantalla.angulo_rectas("y = x", "y = -x")                    # 90.0
+pantalla.distancia_punto_recta((0, 0), "3x + 4y - 10 = 0", pasos=True)
+# d = |3·0 + 4·0 + (-10)| / √(3² + 4²) = 10 / 5 = 2
+```
+
+### Polinomios
+
+<p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/polinomios.svg" alt="Ruffini de x³ - 2x² - x + 2, su factorización, la ecuación de segundo grado paso a paso y la gráfica" width="760"></p>
+
+```python
+p = pantalla.polinomio("2x^3 - 3x + 1")      # también "2x³ - 3x + 1" o Polinomio(2, 0, -3, 1)
+print(p)                 # 2x³ - 3x + 1
+p(2)                     # 11
+p.grado                  # 3
+p.derivada()             # 6x² - 3
+p * p, p + 1, p ** 2     # se suman, restan y multiplican como números
+
+pantalla.dividir_polinomios("x^3 + 2x + 5", "x^2 + 1")       # (x, x + 5): cociente y resto
+pantalla.ruffini(p, 1, pasos=True)                            # la tabla de Ruffini
+pantalla.raices("x^3 - 2x^2 - x + 2")                        # [-1, 1, 2]
+pantalla.factorizar_polinomio("2x^2 - 2")                    # 2·(x - 1)·(x + 1)
+pantalla.ecuacion_segundo_grado(1, -5, 6, pasos=True)        # [3, 2]
+```
+
+Con `pasos=True`:
+
+```text
+  │   2   0  -3   1                 x² - 5x + 6 = 0
+1 │       2   2  -1                 Δ = b² - 4ac = (-5)² - 4·1·6 = 25 - 24 = 1
+──┼────────────────                 x = (-b ± √Δ) / 2a = (5 ± 1) / 2
+  │   2   2  -1   0                 x₁ = 3    x₂ = 2
+Cociente: 2x² + 2x - 1    Resto: 0
+```
+
+`factorizar_polinomio(p, pasos=True)` va probando raíces y hace un Ruffini por cada una. Las raíces que no son fracciones salen con decimales.
+
 ### Fracciones y números
 
 <p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/mates.svg" alt="Cuentas con fracciones, una matriz con su inversa y la descomposición de 360" width="640"></p>
@@ -559,6 +619,53 @@ pantalla.factorizar(360)    # {2: 3, 3: 2, 5: 1}
 pantalla.descomponer(360)   # la tabla de dividir entre primos y 360 = 2³ · 3² · 5
 ```
 
+#### Cambios de base
+
+```python
+pantalla.a_binario(45)             # "101101"
+pantalla.a_hexadecimal(255)        # "FF"
+pantalla.cambiar_base(100, 3)      # "10201", cualquier base del 2 al 36
+pantalla.a_decimal("101101")       # 45 (también "ff", 16 o "0x2F")
+
+pantalla.a_binario(45, pasos=True)
+pantalla.a_decimal("101101", pasos=True)
+```
+
+```text
+45 : 2 = 22   resto 1
+22 : 2 = 11   resto 0
+11 : 2 =  5   resto 1
+ 5 : 2 =  2   resto 1
+ 2 : 2 =  1   resto 0
+ 1 : 2 =  0   resto 1
+45 = 101101₂   (los restos, de abajo arriba)
+
+101101₂ = 1·2⁵ + 0·2⁴ + 1·2³ + 1·2² + 0·2¹ + 1·2⁰ = 32 + 8 + 4 + 1 = 45
+```
+
+### Estadística
+
+<p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/estadistica.svg" alt="Histograma de unas notas y la tabla con media, mediana, moda y desviación típica" width="620"></p>
+
+```python
+notas = [5, 7, 7, 8, 6, 9, 7, 4]
+
+pantalla.media(notas)          # 6.625
+pantalla.mediana(notas)        # 7
+pantalla.moda(notas)           # 7 (si empatan, una lista)
+pantalla.varianza(notas)       # 2.234375 (muestra=True para dividir entre n - 1)
+pantalla.desviacion(notas)     # 1.4947...
+pantalla.cuartiles(notas)      # (5.5, 7, 7.5)
+
+pantalla.tabla_frecuencias(notas)               # xᵢ, fᵢ, Fᵢ, hᵢ y %
+pantalla.tabla_frecuencias(alturas, intervalos=5)
+pantalla.histograma(notas, 2, 3, alto=10)
+pantalla.estadisticas(notas)                    # todo lo anterior en una tabla
+```
+
+Los datos también pueden ir contados: `{"rojo": 4, "azul": 2}` o `{5: 3, 6: 1}`.
+
+
 ### Gráficas
 
 <p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/graficas.svg" alt="Seno y coseno, una gráfica de barras y una minigráfica" width="720"></p>
@@ -578,6 +685,47 @@ print("Esta semana:", pantalla.minigrafica([3, 1, 4, 1, 5, 9, 2, 6]))   # ▃▁
 ```
 
 Si la función falla en algún punto (como `1/x` en el 0), ese punto se deja en blanco y sigue.
+
+La línea se dibuja con puntitos braille, como las flechas de los vectores, y queda fina y seguida. Con `estilo="puntos"` sale con `•`, y con `caracter="*"` con la letra que quieras.
+
+### Practicar
+
+```python
+pantalla.practicar("tablas")                       # 5 multiplicaciones
+pantalla.practicar("fracciones", 10, nivel=2)      # nivel 1, 2 o 3
+pantalla.practicar()                               # te deja elegir el tema
+```
+
+Pone el ejercicio, espera la respuesta y te dice si está bien o cuál era (y por qué). Al final sale la nota:
+
+```text
+1) 4 × 3 = 12
+   ¡Bien! ✓
+2) 7 × 8 = 54
+   No, era 56. 7 × 8 = 56
+...
+Has acertado 4 de 5  ★★★★☆  Nota: 8
+```
+
+Temas: tablas, sumas, divisiones, fracciones, potencias, raices, ecuaciones, mcd, primos, binario, porcentajes y vectores. Escribe `salir` para acabar antes. Devuelve cuántas has acertado.
+
+### Récords y tiempo
+
+```python
+puesto = pantalla.guardar_record("Ana", 120)       # 1 si es el mejor, None si no entra
+pantalla.guardar_record("Luis", 34.5, "tiempos.json", menos_es_mejor=True)
+pantalla.leer_records()                            # [("Ana", 120), ...]
+pantalla.mejor_record()                            # 120
+pantalla.tabla_records(x=10, y=5)                  # la tabla con puesto, nombre, puntos y fecha
+
+c = pantalla.cronometro()
+...
+c.parar()
+print("Has tardado", c)                            # Has tardado 00:12.3
+pantalla.cuenta_atras(3)                           # 3, 2, 1, ¡Ya!
+```
+
+Los récords se guardan en un archivo `records.json` en la carpeta de tu programa, así que siguen ahí al volver a abrirlo.
 
 ## Hacer un juego
 
@@ -694,6 +842,10 @@ En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil a
 16. `16_formulario.py`: un formulario y una lista para marcar varias cosas
 17. `17_pantalla_de_carga.py`: una pantalla de carga que prepara un mapa de verdad antes de enseñarlo
 18. `18_vectores.py`: pedir dos vectores, dibujarlos con flechas y sacar el ángulo entre ellos
+19. `19_polinomios.py`: escribir un polinomio, factorizarlo con Ruffini y dibujarlo
+20. `20_estadistica.py`: meter las notas de la clase y sacar el histograma y la tabla de frecuencias
+21. `21_practicar.py`: hacer 10 ejercicios del tema que elijas
+22. `22_records.py`: un juego de rapidez con cuenta atrás, cronómetro y tabla de récords
 
 ## Si algo falla
 

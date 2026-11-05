@@ -252,6 +252,57 @@ def demo_vectores():
     pantalla.tecla()
 
 
+def demo_polinomios():
+    pantalla.limpiar()
+    pantalla.cabecera("Polinomios")
+    p = pantalla.polinomio("x^3 - 2x^2 - x + 2")
+    pantalla.escribir("p(x) = %s" % p, 3, 3, color="cian", negrita=True)
+    pantalla.escribir("Ruffini con x = 1:", 3, 5, color="gris")
+    pantalla.ruffini(p, 1, x=3, y=6)
+    pantalla.escribir("raíces: %s" % pantalla.raices(p), 3, 12)
+    pantalla.escribir("p(x) = %s" % pantalla.factorizar_polinomio(p), 3, 13, color="amarillo")
+    pantalla.escribir("x² - 5x + 6 = 0, paso a paso:", 3, 15, color="gris")
+    pantalla.gotoxy(1, 16)
+    for linea in _capturar(lambda: pantalla.ecuacion_segundo_grado(1, -5, 6, pasos=True)):
+        pantalla.escribir("  " + linea, nueva_linea=True)
+    pantalla.grafica(p, -2, 3, 48, 3, ancho=min(44, pantalla.ancho() - 50), alto=14, color="verde claro")
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
+def _capturar(funcion):
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        funcion()
+    return buf.getvalue().rstrip().splitlines()
+
+
+def demo_estadistica():
+    pantalla.limpiar()
+    pantalla.cabecera("Estadística")
+    notas = [5, 7, 7, 8, 6, 9, 7, 4, 6, 7, 8, 5, 10, 6, 7]
+    pantalla.escribir("notas = %s" % notas, 3, 3, color="cian")
+    pantalla.histograma(notas, 3, 5, alto=8)
+    pantalla.estadisticas(notas, 34, 5)
+    pantalla.escribir("Cambio de base: 45 = %s₂    255 = %s₁₆" % (pantalla.a_binario(45), pantalla.a_hexadecimal(255)),
+                      3, 18, color="gris")
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
+def demo_practicar():
+    pantalla.limpiar()
+    pantalla.cabecera("Practicar")
+    pantalla.gotoxy(1, 3)
+    pantalla.mostrar_cursor()
+    pantalla.practicar("tablas", 5)
+    pantalla.ocultar_cursor()
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
 def demo_cargas():
     pantalla.limpiar()
     pantalla.cabecera("Barras y pantallas de carga")
@@ -289,7 +340,8 @@ def main():
     secciones = {
         "Lo básico": ["Colores", "Cajas y dibujos", "Fuentes ASCII", "Teclado"],
         "Cosas ya hechas": ["Menús", "Tablas, barras y mensajes", "Pantallas de carga", "Pedir datos"],
-        "Más": ["Matrices", "Vectores", "Fracciones", "Gráficas", "Mover una @", "Ver posiciones", "Salir"],
+        "Mates": ["Matrices", "Vectores", "Polinomios", "Estadística", "Fracciones", "Gráficas"],
+        "Más": ["Practicar", "Mover una @", "Ver posiciones", "Salir"],
     }
     ayudas = {
         "Colores": "Todos los colores y estilos de texto",
@@ -302,6 +354,9 @@ def main():
         "Pedir datos": "pedir, pedir_numero y confirmar",
         "Matrices": "pedir_matriz(), matriz(), determinante() e inversa()",
         "Vectores": "dibujar_vectores(), producto escalar y vectorial, módulo y ángulo",
+        "Polinomios": "ruffini(), raices(), factorizar_polinomio() y la ecuación de segundo grado",
+        "Estadística": "histograma(), estadisticas(), tabla_frecuencias() y cambios de base",
+        "Practicar": "practicar(): 5 multiplicaciones, y te corrige",
         "Fracciones": "escribir_cuenta(), descomponer(), mcd, mcm y primos",
         "Gráficas": "grafica(), barras() y minigrafica()",
         "Mover una @": "Un juego mínimo con las flechas",
@@ -311,7 +366,8 @@ def main():
     iconos = {
         "Colores": "■", "Cajas y dibujos": "┌┐", "Fuentes ASCII": "A", "Teclado": "Aa", "Menús": "≡",
         "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Pantallas de carga": "▰▱", "Matrices": "[ ]",
-        "Vectores": "↗", "Fracciones": "½", "Gráficas": "~",
+        "Vectores": "↗", "Fracciones": "½", "Gráficas": "~", "Polinomios": "x²", "Estadística": "▃▅",
+        "Practicar": "✓",
         "Mover una @": "@", "Ver posiciones": "╋", "Salir": "←",
     }
     pantalla.iniciar(titulo="pantalla · demo")
@@ -342,6 +398,12 @@ def main():
                 demo_matrices()
             elif elegida == "Vectores":
                 demo_vectores()
+            elif elegida == "Polinomios":
+                demo_polinomios()
+            elif elegida == "Estadística":
+                demo_estadistica()
+            elif elegida == "Practicar":
+                demo_practicar()
             elif elegida == "Fracciones":
                 demo_fracciones()
             elif elegida == "Gráficas":

@@ -785,7 +785,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 <header class="cabeza">
   <div class="marca">
     <h1>pantalla<span>.</span>constructor</h1>
-    <small>para la librería <code>pantalla</code> 0.5</small>
+    <small>para la librería <code>pantalla</code> 0.6</small>
   </div>
   <ol class="pasos" aria-label="Cómo se usa">
     <li><b>1</b> Dibuja en la terminal</li>
@@ -4854,16 +4854,21 @@ const Docs = (() => {
   }
   const COLORES_GRAFICA = ["cian", "amarillo", "verde claro", "morado claro", "rojo claro", "azul claro"];
   function graficaArte(funciones, desde, hasta, o) {
-    const { ancho = 50, alto = 15, color = null, caracter = "•", ejes = true } = o;
+    const { ancho = 50, alto = 15, color = null, ejes = true } = o;
+    let { caracter = null, estilo = "fino" } = o;
     if (ancho < 12 || alto < 4) throw errorPy("ValueError", "grafica: es muy pequeña. Ponle por lo menos ancho=12 y alto=4");
+    if (estilo !== "fino" && estilo !== "puntos") throw errorPy("ValueError", `grafica: estilo puede ser "fino" o "puntos", y me has dado '${estilo}'`);
+    if (caracter !== null) estilo = "puntos"; else caracter = "•";
+    const fino = estilo === "fino", porX = fino ? 2 : 1, porY = fino ? 4 : 1;
     if (!funciones.length) throw errorPy("TypeError", "grafica: dame una función (por ejemplo lambda x: x * x) o una lista de números");
     if (hasta <= desde) throw errorPy("ValueError", `grafica: 'hasta' (${textoCorto(hasta)}) tiene que ser mayor que 'desde' (${textoCorto(desde)})`);
     const altoD = alto - 1;
-    let anchoNum = 1, anchoD = 0, xs = [], series = [], bajo = -1, arriba = 1;
+    let anchoNum = 1, anchoD = 0, muestras = 0, xs = [], series = [], bajo = -1, arriba = 1;
     for (let vuelta = 0; vuelta < 2; vuelta++) {
       anchoD = ancho - anchoNum - 1;
+      muestras = anchoD * porX;
       xs = [];
-      for (let i = 0; i < anchoD; i++) xs.push(desde + (hasta - desde) * i / Math.max(1, anchoD - 1));
+      for (let i = 0; i < muestras; i++) xs.push(desde + (hasta - desde) * i / Math.max(1, muestras - 1));
       series = funciones.map(f => xs.map(x => valorEn(f, x)));
       [bajo, arriba] = rangoY(series, null, null);
       const et = [textoCorto(arriba), textoCorto(bajo)];
@@ -4872,29 +4877,37 @@ const Docs = (() => {
       if (nuevo === anchoNum) break;
       anchoNum = nuevo;
     }
-    const filaDe = v => redondoPy((arriba - v) / (arriba - bajo) * (altoD - 1));
+    const altoP = altoD * porY;
+    const filaDe = v => redondoPy((arriba - v) / (arriba - bajo) * (altoP - 1));
     const celdas = Array.from({ length: altoD }, () => Array.from({ length: anchoD }, () => [" ", null]));
-    const filaCero = bajo <= 0 && 0 <= arriba ? filaDe(0) : null;
-    const colCero = desde <= 0 && 0 <= hasta ? redondoPy(-desde / (hasta - desde) * (anchoD - 1)) : null;
+    const filaCero = bajo <= 0 && 0 <= arriba ? Math.floor(filaDe(0) / porY) : null;
+    const colCero = desde <= 0 && 0 <= hasta ? Math.floor(redondoPy(-desde / (hasta - desde) * (muestras - 1)) / porX) : null;
     if (ejes) {
       if (filaCero !== null) for (let c = 0; c < anchoD; c++) celdas[filaCero][c] = ["─", "gris"];
       if (colCero !== null) for (let f = 0; f < altoD; f++) celdas[f][colCero] = [f === filaCero ? "┼" : "│", "gris"];
     }
+    const puntos = new Map();
+    const poner = (c, f, cod) => {
+      if (!fino) { celdas[f][c] = [caracter, cod]; return; }
+      const clave = Math.floor(f / 4) * 100000 + Math.floor(c / 2), antes = puntos.get(clave);
+      puntos.set(clave, [(antes ? antes[0] : 0) | BITS_BRAILLE[c % 2][f % 4], cod]);
+    };
     series.forEach((serie, s) => {
       const cod = color && series.length === 1 ? color : COLORES_GRAFICA[s % COLORES_GRAFICA.length];
       let anterior = null;
       serie.forEach((v, c) => {
         if (v === null || !(bajo - 1e-9 <= v && v <= arriba + 1e-9)) { anterior = null; return; }
         const f = filaDe(v);
-        celdas[f][c] = [caracter, cod];
+        poner(c, f, cod);
         // si de una columna a la siguiente da un salto, se rellena para que se vea seguida
         if (anterior !== null && Math.abs(f - anterior) > 1) {
           const paso = f > anterior ? 1 : -1, mitad = Math.floor((anterior + f) / 2);
-          for (let g = anterior + paso; g !== f; g += paso) celdas[g][(g - mitad) * paso <= 0 ? c - 1 : c] = [caracter, cod];
+          for (let g = anterior + paso; g !== f; g += paso) poner((g - mitad) * paso <= 0 ? c - 1 : c, g, cod);
         }
         anterior = f;
       });
     });
+    puntos.forEach(([bits, cod], clave) => { celdas[Math.floor(clave / 100000)][clave % 100000] = [String.fromCodePoint(0x2800 + bits), cod]; });
     const lineas = [], colores = [];
     for (let f = 0; f < altoD; f++) {
       const numero = f === 0 ? textoCorto(arriba) : f === altoD - 1 ? textoCorto(bajo) : f === filaCero ? "0" : "";
@@ -4911,7 +4924,7 @@ const Docs = (() => {
     }
     abajo += der.padStart(ancho - abajo.length);
     lineas.push(abajo); colores.push("g".repeat(abajo.length));
-    return { lineas, colores, xs, series, x0: anchoNum + 1, filaDe, bajo, arriba };
+    return { lineas, colores, xs, series, x0: anchoNum + 1, filaDe: v => Math.floor(filaDe(v) / porY), porX, bajo, arriba };
   }
   // el error tal cual lo enseña python, partido para que quepa
   function errorEnTerminal(e, ancho) {
@@ -5111,30 +5124,233 @@ const Docs = (() => {
     return { w, lineas: [" ".repeat(delante.length) + cajas[0], delante + cajas[1] + " = " + cuenta + " = " + textoV(w), " ".repeat(delante.length) + cajas[2]] };
   }
 
+  // polinomios, rectas, estadística y bases: las mismas cuentas que los .py (con los deslizadores solo salen enteros)
+  const sinMenosCero = n => n || 0;
+  const fr = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const m = mcdPy(Math.abs(n), d) || 1; return [sinMenosCero(n / m), d / m]; };
+  const frTxt = ([n, d]) => d === 1 ? String(n) : `${n}/${d}`;
+  const pP = n => n < 0 ? `(${n})` : String(n);
+  const sinCerosPy = t => t.includes(".") ? t.replace(/0+$/, "").replace(/\.$/, "") : t;
+  // el %.Nf de python, que en los empates redondea al par
+  function fijoPy(v, dec) {
+    const k = 10 ** dec, t = v * k;
+    if (Number.isInteger(t * 2) && !Number.isInteger(t)) return (redondoPy(t) / k).toFixed(dec);
+    return v.toFixed(dec);
+  }
+  const redondo12 = v => Math.abs(v) < 1e-12 ? 0 : Number(fijoPy(v, 12));
+  // [[texto, color], ...] por línea -> el elemento "arte"
+  function arteDe(filas, x = 1, y = 1) {
+    const lineas = [], colores = [];
+    filas.forEach(trozos => {
+      let l = "", c = "";
+      trozos.forEach(([t, col]) => { l += t; c += (col ? CODIGO_DE[col] : " ").repeat([...t].length); });
+      lineas.push(l); colores.push(c);
+    });
+    return { tipo: "arte", x, y, lineas, colores };
+  }
+  const anchoDe = filas => Math.max(1, ...filas.map(tr => tr.reduce((s, [t]) => s + [...t].length, 0)));
+  function polTxt(c, gorro = false) {
+    let i = 0;
+    while (i < c.length - 1 && c[i] === 0) i++;
+    c = c.slice(i);
+    const g = c.length - 1, partes = [];
+    c.forEach((n, j) => {
+      const k = g - j;
+      if (n === 0 && c.length > 1) return;
+      let t = String(Math.abs(n));
+      if (k > 0) { if (t === "1") t = ""; t += "x" + (k > 1 ? (gorro ? "^" + k : elevado(k)) : ""); }
+      partes.push(partes.length ? (n < 0 ? " - " : " + ") + t : (n < 0 ? "-" : "") + t);
+    });
+    return partes.join("") || "0";
+  }
+  function ruffiniJS(c, a) {
+    let i = 0;
+    while (i < c.length - 1 && c[i] === 0) i++;
+    c = c.slice(i);
+    const productos = [], resultado = [c[0]];
+    c.slice(1).forEach(n => { productos.push(resultado[resultado.length - 1] * a); resultado.push(n + productos[productos.length - 1]); });
+    const w = Math.max(...c.concat(productos, resultado).map(n => String(n).length)) + 1;
+    const celdas = ns => ns.map(n => String(n).padStart(w)).join(" ");
+    const ta = String(a), k = ta.length + 1, resto = resultado[resultado.length - 1], coc = resultado.slice(0, -1);
+    const antes = celdas(coc);
+    const filas = [[[" ".repeat(k) + "│ " + celdas(c)]],
+      [[ta.padStart(k - 1) + " │ " + " ".repeat(w + 1) + celdas(productos)]],
+      [["─".repeat(k) + "┼" + "─".repeat(celdas(c).length + 1)]],
+      [[" ".repeat(k) + "│ " + (antes ? antes + " " : "")], [String(resto).padStart(w), "amarillo"]],
+      [["Cociente: " + polTxt(coc.length ? coc : [0]) + "    Resto: " + resto]]];
+    return { filas, resto, cociente: coc.length ? coc : [0] };
+  }
+  function textoRaizPol(d) {
+    let n = d, fuera = 1;
+    for (let k = 2; k * k <= n; k++) while (n % (k * k) === 0) { fuera *= k; n /= k * k; }
+    return fuera > 1 ? `${fuera}√${n}` : `√${n}`;
+  }
+  function segundoGradoJS(a, b, c) {
+    const d = b * b - 4 * a * c, r = d >= 0 ? raizExacta(d) : null;
+    let sol = [];
+    if (d >= 0) sol = r !== null ? [fr(-b + r, 2 * a), fr(-b - r, 2 * a)] : [redondo12((-b + Math.sqrt(d)) / (2 * a)), redondo12((-b - Math.sqrt(d)) / (2 * a))];
+    if (d === 0) sol = sol.slice(0, 1);
+    const lineas = [polTxt([a, b, c]) + " = 0",
+      `Δ = b² - 4ac = ${pP(b)}² - 4·${pP(a)}·${pP(c)} = ${b * b} ${4 * a * c < 0 ? "+" : "-"} ${Math.abs(4 * a * c)} = ${d}`];
+    const menosB = String(sinMenosCero(-b)), dosA = String(2 * a);
+    if (d < 0) lineas.push("Δ es negativo: no tiene soluciones (no hay ninguna raíz de un número negativo)");
+    else if (d === 0) lineas.push(`x = -b / 2a = ${menosB} / ${pP(2 * a)} = ${frTxt(sol[0])}    (Δ = 0: una sola solución, doble)`);
+    else {
+      lineas.push(`x = (-b ± √Δ) / 2a = (${menosB} ± ${r !== null ? r : textoRaizPol(d)}) / ${dosA.startsWith("-") ? pP(2 * a) : dosA}`);
+      lineas.push(r !== null ? `x₁ = ${frTxt(sol[0])}    x₂ = ${frTxt(sol[1])}` : `x₁ ≈ ${sinCerosPy(fijoPy(sol[0], 4))}    x₂ ≈ ${sinCerosPy(fijoPy(sol[1], 4))}`);
+    }
+    const devuelve = "[" + sol.map(s => Array.isArray(s) ? frTxt(s) : floatPy(s)).join(", ") + "]";
+    return { lineas, devuelve, d };
+  }
+  const CIFRAS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const debajo = e => String(e).replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);
+  function cambiarBaseJS(n, base) {
+    const divs = [];
+    let m = Math.abs(n);
+    while (true) { divs.push([m, Math.floor(m / base), m % base]); m = Math.floor(m / base); if (m === 0) break; }
+    const texto = (n < 0 ? "-" : "") + divs.slice().reverse().map(([, , r]) => CIFRAS[r]).join("");
+    const a = String(divs[0][0]).length, b = String(divs[0][1]).length;
+    const filas = divs.map(([d, c, r]) => [[`${String(d).padStart(a)} : ${base} = ${String(c).padStart(b)}   resto `], [String(r), "amarillo"], [r >= 10 ? ` (${CIFRAS[r]})` : ""]]);
+    filas.push([[`${n} = `], [texto, "amarillo"], [debajo(base) + "   (los restos, de abajo arriba)"]]);
+    return { texto, filas };
+  }
+  function aDecimalJS(t, base) {
+    const valores = [...t].map(c => CIFRAS.indexOf(c)), k = valores.length - 1;
+    let total = 0;
+    valores.forEach(v => { total = total * base + v; });
+    const sumandos = valores.map((v, i) => `${v}·${base}${elevado(k - i)}`);
+    const partes = valores.map((v, i) => v ? String(v * base ** (k - i)) : null).filter(Boolean);
+    let linea = `${t}${debajo(base)} = ${sumandos.join(" + ")}`;
+    if (partes.length > 1) linea += " = " + partes.join(" + ");
+    return { total, filas: [[[linea + " = "], [String(total), "amarillo"]]] };
+  }
+  // rectas por dos puntos con coordenadas enteras
+  const comoFr = n => Array.isArray(n) ? n : [n, 1];
+  function linealJS(ts) {
+    const partes = [];
+    ts.forEach(([n, letra]) => {
+      n = comoFr(n);
+      if (n[0] === 0) return;
+      let t = frTxt([Math.abs(n[0]), n[1]]);
+      if (letra) t = (t.includes("/") ? `(${t})` : t === "1" ? "" : t) + letra;
+      partes.push(partes.length ? (n[0] < 0 ? " - " : " + ") + t : (n[0] < 0 ? "-" : "") + t);
+    });
+    return partes.join("") || "0";
+  }
+  const menosJS = (letra, n) => n === 0 ? letra : `${letra} ${n > 0 ? "-" : "+"} ${Math.abs(n)}`;
+  function rectaJS(P, Q) {
+    const v = [Q[0] - P[0], Q[1] - P[1]];
+    let a = v[1], b = sinMenosCero(-v[0]), c = sinMenosCero(-(a * P[0] + b * P[1]));
+    const g = mcdPy(mcdPy(Math.abs(a), Math.abs(b)), Math.abs(c)) || 1;
+    [a, b, c] = [a / g, b / g, c / g].map(sinMenosCero);
+    if (a < 0 || (a === 0 && b < 0)) [a, b, c] = [-a, -b, -c].map(sinMenosCero);
+    const m = b === 0 ? null : fr(-a, b), n = b === 0 ? null : fr(-c, b);
+    const explicita = b === 0 ? "x = " + frTxt(fr(-c, a)) : "y = " + linealJS([[m, "x"], [n, ""]]);
+    let pp = explicita;
+    if (b !== 0 && a !== 0) {
+      const t = frTxt(m);
+      const delante = t.includes("/") ? (t.startsWith("-") ? `-(${t.slice(1)})` : `(${t})`) : t === "-1" ? "-" : t === "1" ? "" : t;
+      pp = `${menosJS("y", P[1])} = ${delante}${P[0] !== 0 ? `(${menosJS("x", P[0])})` : "x"}`;
+    }
+    const uno = (l, p, w) => `${l} = ${p !== 0 ? linealJS([[p, ""], [w, "t"]]) : linealJS([[w, "t"]])}`;
+    const parte = (l, p, w) => (p !== 0 ? `(${menosJS(l, p)})` : l) + "/" + (w < 0 ? `(${w})` : String(w));
+    const filas = [["Vectorial", `(x, y) = (${P.join(", ")}) + t·(${v.join(", ")})`],
+      ["Paramétricas", uno("x", P[0], v[0]) + ",  " + uno("y", P[1], v[1])],
+      ["Continua", v[0] === 0 || v[1] === 0 ? `no tiene ecuación continua (el vector (${v.join(", ")}) tiene un 0)` : parte("x", P[0], v[0]) + " = " + parte("y", P[1], v[1])],
+      ["General", linealJS([[a, "x"], [b, "y"], [c, ""]]) + " = 0"], ["Explícita", explicita]];
+    if (b !== 0) filas.push(["Punto-pendiente", pp]);
+    const w = Math.max(...filas.map(([t]) => t.length));
+    return { a, b, c, m, n, lineas: filas.map(([t, e]) => (t + ":").padEnd(w + 1) + "  " + e), general: filas[3][1] };
+  }
+  // estadística: con enteros las cuentas son exactas, como con Fraction en python
+  function textoEst(v, dec = 2) {
+    if (Number.isInteger(v)) return String(v);
+    if (Math.abs(v) < 1e-3 || Math.abs(v) >= 1e9) return String(Number(v.toPrecision(6)));
+    return sinCerosPy(fijoPy(v, dec));
+  }
+  function estadisticasJS(ns) {
+    const n = ns.length, enteros = ns.every(Number.isInteger), orden = ns.slice().sort((a, b) => a - b);
+    const numero = (num, den) => num % den === 0 ? num / den : redondo12(num / den);
+    const suma = ns.reduce((s, v) => s + v, 0);
+    const media = enteros ? numero(suma, n) : redondo12(suma / n);
+    const medio = (a, b) => enteros ? numero(a + b, 2) : redondo12((a + b) / 2);
+    const mediana = n % 2 ? orden[(n - 1) / 2] : medio(orden[n / 2 - 1], orden[n / 2]);
+    const veces = new Map();
+    ns.forEach(v => veces.set(v, (veces.get(v) || 0) + 1));
+    const tope = Math.max(...veces.values()), modas = [...veces.keys()].sort((a, b) => a - b).filter(v => veces.get(v) === tope);
+    let varianza;
+    if (enteros) varianza = numero(ns.reduce((s, v) => s + (n * v - suma) ** 2, 0), n * n * n);
+    else { const m = suma / n; varianza = redondo12(ns.reduce((s, v) => s + (v - m) ** 2, 0) / n); }
+    const r = Number.isInteger(varianza) ? isqrt(varianza) : null;
+    const desviacion = r !== null && r * r === varianza ? r : redondo12(Math.sqrt(varianza));
+    const q = [1, 2, 3].map(k => {
+      const pos = k * n / 4;
+      if (Number.isInteger(pos)) return pos >= n ? orden[pos - 1] : medio(orden[pos - 1], orden[pos]);
+      return orden[Math.ceil(pos) - 1];
+    });
+    const filas = [["Datos (n)", String(n)], ["Media", textoEst(media, 4)], ["Mediana", textoEst(mediana, 4)],
+      ["Moda", modas.map(m => textoEst(m, 4)).join(", ")], ["Mínimo", textoEst(orden[0], 4)], ["Máximo", textoEst(orden[n - 1], 4)],
+      ["Recorrido", textoEst(enteros ? orden[n - 1] - orden[0] : redondo12(orden[n - 1] - orden[0]), 4)],
+      ["Varianza", textoEst(varianza, 4)], ["Desviación típica", textoEst(desviacion, 4)], ["Cuartiles", q.map(v => textoEst(v, 4)).join(", ")]];
+    const w = Math.max(...filas.map(f => f[1].length));
+    return { media, mediana, modas, varianza, desviacion, filas: filas.map(([a, b]) => [a, b.padStart(w)]), veces };
+  }
+  // la tabla de componentes.py con estilo "simple"
+  function tablaFilas(filas, cab, colorCab = "cian") {
+    const todas = cab ? [cab].concat(filas) : filas;
+    const anchos = todas[0].map((_, i) => Math.max(...todas.map(f => [...f[i]].length)));
+    const raya = (iz, me, de) => [[iz + anchos.map(a => "─".repeat(a + 2)).join(me) + de]];
+    const fila = (f, col) => { const t = []; f.forEach((v, i) => { t.push(["│ "], [v + " ".repeat(anchos[i] - [...v].length), col]); t.push([" "]); }); t.push(["│"]); return t; };
+    const out = [raya("┌", "┬", "┐")];
+    if (cab) out.push(fila(cab, colorCab), raya("├", "┼", "┤"));
+    filas.forEach(f => out.push(fila(f, null)));
+    out.push(raya("└", "┴", "┘"));
+    return out;
+  }
+  function histogramaJS(clases, alto = 10, anchoBarra = 3) {
+    const tope = Math.max(...clases.map(([, v]) => v)), w = Math.max(anchoBarra, ...clases.map(([e]) => e.length));
+    const columnas = clases.map(([, v]) => {
+      const o = tope ? redondoPy(v / tope * alto * 8) : 0, cas = [];
+      for (let i = 0; i < Math.floor(o / 8); i++) cas.push([centrarPy("█".repeat(anchoBarra), w), "cian"]);
+      if (o % 8) cas.push([centrarPy(ESCALONES[o % 8 - 1].repeat(anchoBarra), w), "cian"]);
+      cas.push([centrarPy(String(v), w), "gris"]);
+      while (cas.length < alto + 1) cas.push([" ".repeat(w), null]);
+      return cas;
+    });
+    const filas = [];
+    for (let f = alto; f >= 0; f--) {
+      const t = [];
+      columnas.forEach((c, i) => { if (i) t.push([" "]); t.push(c[f]); });
+      filas.push(t);
+    }
+    filas.push([["─".repeat(clases.length * (w + 1) - 1), "gris"]]);
+    filas.push([[clases.map(([e]) => centrarPy(e, w)).join(" ")]]);
+    return { filas, ancho: clases.length * (w + 1) - 1, alto: filas.length };
+  }
+
   const INTER = {
     grafica: {
-      desc: "La gráfica de una función, con sus ejes. Se ajusta sola, y donde la función no existe (como 1/x en el 0) deja un hueco. Mueve a y b y mira cómo cambia.",
+      desc: "La gráfica de una función, con sus ejes. La línea va con puntitos braille para que salga fina (estilo=\"puntos\" la hace con •). Se ajusta sola, y donde la función no existe (como 1/x en el 0) deja un hueco.",
       p: [{ k: "funcion", t: "sel", v: "a·x² + b", ops: Object.keys(FUNCIONES), label: "función" },
         { k: "a", t: "rango", v: 1, min: -3, max: 3, paso: 0.5 }, { k: "b", t: "rango", v: -4, min: -5, max: 5, paso: 0.5 },
         { k: "desde", t: "rango", v: -4, min: -10, max: 10, paso: 0.5 }, { k: "hasta", t: "rango", v: 4, min: -10, max: 10, paso: 0.5 },
         { k: "ancho", t: "rango", v: 44, min: 12, max: 60 }, { k: "alto", t: "rango", v: 12, min: 4, max: 16 },
-        { k: "color", t: "color", v: "", ninguno: true }, { k: "ejes", t: "check", v: true }],
+        { k: "color", t: "color", v: "", ninguno: true }, { k: "estilo", t: "sel", v: "fino", ops: ["fino", "puntos"] }, { k: "ejes", t: "check", v: true }],
       raton: ratonGrafica,
       vista: (p, s) => {
         const F = FUNCIONES[p.funcion] || FUNCIONES["a·x² + b"];
         const expr = F.py(p.a, p.b), f = F.f(p.a, p.b);
         const codigo = (F.math ? "import math\n\n" : "") + llamada("grafica", [{ crudo: "lambda x: " + expr }, p.desde, p.hasta],
-          [["ancho", p.ancho === 50 ? null : p.ancho], ["alto", p.alto === 15 ? null : p.alto], ["color", p.color || null], ["ejes", p.ejes ? null : { crudo: "False" }]]);
+          [["ancho", p.ancho === 50 ? null : p.ancho], ["alto", p.alto === 15 ? null : p.alto], ["color", p.color || null], ["ejes", p.ejes ? null : { crudo: "False" }], ["estilo", p.estilo === "fino" ? null : p.estilo]]);
         let g;
-        try { g = graficaArte([f], p.desde, p.hasta, { ancho: p.ancho, alto: p.alto, color: p.color || null, ejes: p.ejes }); }
+        try { g = graficaArte([f], p.desde, p.hasta, { ancho: p.ancho, alto: p.alto, color: p.color || null, ejes: p.ejes, estilo: p.estilo }); }
         catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: p.alto, codigo, res: res("lanza", e.tipo) }; }
         const els = [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }];
         let r = pista("Pasa el ratón o toca la gráfica para ver cada punto");
-        const c = s.hover == null ? -1 : s.hover - 1 - g.x0;
-        if (c >= 0 && c < g.xs.length) {
-          const y = g.series[0][c], dentro = y !== null && y >= g.bajo - 1e-9 && y <= g.arriba + 1e-9;
+        const c = s.hover == null ? -1 : s.hover - 1 - g.x0, k = c * g.porX;
+        if (c >= 0 && k < g.xs.length) {
+          const y = g.series[0][k], dentro = y !== null && y >= g.bajo - 1e-9 && y <= g.arriba + 1e-9;
           if (dentro) els.push({ tipo: "punto", x: g.x0 + c + 1, y: g.filaDe(y) + 1, caracter: "●", color: "blanco" });
-          r = res(`x = ${textoCorto(g.xs[c])}  →  y =`, y === null ? "no existe" : textoCorto(y) + (dentro ? "" : " (se sale)"));
+          r = res(`x = ${textoCorto(g.xs[k])}  →  y =`, y === null ? "no existe" : textoCorto(y) + (dentro ? "" : " (se sale)"));
         }
         return { elementos: els, ancho: p.ancho, alto: p.alto, codigo, res: r };
       },
@@ -5154,14 +5370,14 @@ const Docs = (() => {
         catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: p.alto, codigo, res: res("lanza", e.tipo) }; }
         const els = [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }];
         let r = pista("Cada función sale de un color. Pasa el ratón o toca la gráfica");
-        const c = s.hover == null ? -1 : s.hover - 1 - g.x0;
-        if (c >= 0 && c < g.xs.length) {
+        const c = s.hover == null ? -1 : s.hover - 1 - g.x0, k = c * g.porX;
+        if (c >= 0 && k < g.xs.length) {
           const partes = usadas.map(([k], i) => {
-            const y = g.series[i][c];
+            const y = g.series[i][k];
             if (y !== null && y >= g.bajo - 1e-9 && y <= g.arriba + 1e-9) els.push({ tipo: "punto", x: g.x0 + c + 1, y: g.filaDe(y) + 1, caracter: "●", color: "blanco" });
             return `${k.replace("math.", "")} ${y === null ? "—" : textoCorto(y)}`;
           });
-          r = res(`x = ${textoCorto(g.xs[c])}  →`, partes.join("   "));
+          r = res(`x = ${textoCorto(g.xs[k])}  →`, partes.join("   "));
         }
         return { elementos: els, ancho: p.ancho, alto: p.alto, codigo, res: r };
       },
@@ -5911,6 +6127,134 @@ const Docs = (() => {
         return { elementos: els, ancho: Math.max(44, ...lineas.map(l => l.length + 2)), alto: 6, codigo, res: res("devuelve", textoV(w)) };
       },
     },
+    ruffini: {
+      nuevo: true, cat: "polinomios", titulo: "pantalla.ruffini()",
+      desc: "Divide un polinomio entre (x - a) con la regla de Ruffini y dibuja la tabla. Si el resto da 0, a es una raíz. Mueve los coeficientes y el número a.",
+      p: [{ k: "c3", t: "rango", v: 1, min: -5, max: 5, label: "x³" }, { k: "c2", t: "rango", v: -2, min: -9, max: 9, label: "x²" },
+        { k: "c1", t: "rango", v: -1, min: -9, max: 9, label: "x" }, { k: "c0", t: "rango", v: 2, min: -9, max: 9, label: "número" },
+        { k: "a", t: "rango", v: 1, min: -5, max: 5 }],
+      alto: 7,
+      vista: p => {
+        const c = [p.c3, p.c2, p.c1, p.c0], r = ruffiniJS(c, p.a);
+        const codigo = `p = pantalla.polinomio(${py(polTxt(c, true))})\nc, r = pantalla.ruffini(p, ${p.a}, pasos=True)\nprint(c, r)   # ${polTxt(r.cociente)} ${r.resto}`;
+        const filas = [[["p(x) = " + polTxt(c), "cian"]], []].concat(r.filas);
+        return { elementos: [arteDe(filas)], ancho: Math.max(40, anchoDe(filas) + 2), alto: filas.length, codigo,
+          res: r.resto === 0 ? res(`x = ${p.a} es raíz:`, `p(x) = (${menosJS("x", p.a)})·(${polTxt(r.cociente)})`) : res("el resto es", String(r.resto)) };
+      },
+    },
+    ecuacion_segundo_grado: {
+      nuevo: true, cat: "polinomios", titulo: "pantalla.ecuacion_segundo_grado()",
+      desc: "Resuelve a·x² + b·x + c = 0. Con pasos=True escribe el discriminante y la fórmula con los números puestos. Si Δ es negativo no hay soluciones.",
+      p: [{ k: "a", t: "rango", v: 1, min: -5, max: 5 }, { k: "b", t: "rango", v: -5, min: -12, max: 12 }, { k: "c", t: "rango", v: 6, min: -12, max: 12 }],
+      alto: 5,
+      vista: p => {
+        const codigo = `soluciones = pantalla.ecuacion_segundo_grado(${p.a}, ${p.b}, ${p.c}, pasos=True)`;
+        if (p.a === 0) return { elementos: errorEnTerminal(errorPy("ValueError", "ecuacion_segundo_grado: si a = 0 no es de segundo grado. bx + c = 0 se resuelve con x = -c / b"), 48), ancho: 48, alto: 6, codigo, res: res("lanza", "ValueError") };
+        const s = segundoGradoJS(p.a, p.b, p.c);
+        const filas = s.lineas.map((l, i) => [[l, i === 3 || (i === 2 && s.d === 0) ? "verde claro" : s.d < 0 && i === 2 ? "rojo claro" : null]]);
+        return { elementos: [arteDe(filas)], ancho: Math.max(44, anchoDe(filas) + 2), alto: 5, codigo, res: res("devuelve", s.devuelve) };
+      },
+    },
+    cambiar_base: {
+      nuevo: true, cat: "mates", despues: "mcd", titulo: "pantalla.cambiar_base() y a_decimal()",
+      desc: "Pasa un número a binario, hexadecimal o la base que quieras, con las divisiones y los restos. a_decimal() hace la vuelta con la suma de potencias.",
+      p: [{ k: "n", t: "rango", v: 45, min: 0, max: 300 }, { k: "base", t: "sel", v: "2", ops: ["2", "3", "5", "8", "16"] }],
+      alto: 12,
+      vista: p => {
+        const base = +p.base, c = cambiarBaseJS(p.n, base), d = aDecimalJS(c.texto, base);
+        const filas = c.filas.concat([[]], d.filas);
+        const nombre = base === 2 ? `a_binario(${p.n}` : base === 16 ? `a_hexadecimal(${p.n}` : `cambiar_base(${p.n}, ${base}`;
+        const codigo = `pantalla.${nombre}, pasos=True)        # ${py(c.texto)}\npantalla.a_decimal(${py(c.texto)}${base === 2 ? "" : ", " + base}, pasos=True)   # ${d.total}`;
+        return { elementos: [arteDe(filas)], ancho: Math.max(40, anchoDe(filas) + 2), alto: filas.length, codigo, res: res("devuelve", py(c.texto)) };
+      },
+    },
+    ecuaciones_recta: {
+      nuevo: true, cat: "rectas", titulo: "pantalla.recta() y ecuaciones_recta()",
+      desc: "La recta que pasa por dos puntos, con todas sus ecuaciones. Una recta también es una función, así que se puede pasar a grafica(). Mueve los puntos.",
+      p: [{ k: "ax", t: "rango", v: 1, min: -5, max: 5, label: "A: x" }, { k: "ay", t: "rango", v: 3, min: -5, max: 5, label: "A: y" },
+        { k: "bx", t: "rango", v: 2, min: -5, max: 5, label: "B: x" }, { k: "by", t: "rango", v: 5, min: -5, max: 5, label: "B: y" },
+        { k: "grafica", t: "check", v: false }],
+      alto: 6,
+      vista: p => {
+        const A = [p.ax, p.ay], B = [p.bx, p.by];
+        let codigo = `r = pantalla.ecuaciones_recta((${A.join(", ")}), (${B.join(", ")}))`;
+        if (A[0] === B[0] && A[1] === B[1])
+          return { elementos: errorEnTerminal(errorPy("ValueError", "recta: los dos puntos son el mismo, y por un punto pasan infinitas rectas"), 46), ancho: 46, alto: 6, codigo, res: res("lanza", "ValueError") };
+        const r = rectaJS(A, B), els = [arteDe(r.lineas.map(l => [[l]]))];
+        let ancho = Math.max(44, ...r.lineas.map(l => l.length + 2)), alto = r.lineas.length;
+        if (p.grafica && r.b !== 0) {
+          codigo += "\npantalla.grafica(r, -6, 6, ancho=40, alto=9)";
+          const g = graficaArte([x => redondo12((-r.a * x - r.c) / r.b)], -6, 6, { ancho: 40, alto: 9, color: null });
+          els.push({ tipo: "arte", x: 1, y: alto + 2, lineas: g.lineas, colores: g.colores });
+          alto += 10;
+        }
+        return { elementos: els, ancho, alto, codigo, res: res("print(r) →", r.general) };
+      },
+    },
+    estadisticas: {
+      nuevo: true, cat: "estadistica", titulo: "pantalla.histograma() y estadisticas()",
+      desc: "Escribe unos datos (notas, alturas...) separados por comas. histograma() dibuja cuántas veces sale cada uno y estadisticas() saca la media, la mediana, la moda y la desviación típica.",
+      p: [{ k: "datos", t: "texto", v: "5, 7, 7, 8, 6, 9, 7, 4, 6, 7, 8, 5", label: "datos" }, { k: "alto", t: "rango", v: 8, min: 2, max: 12 }],
+      alto: 14,
+      vista: p => {
+        const trozos = String(p.datos).split(/[\s,;]+/).filter(Boolean);
+        const malo = trozos.find(t => !/^-?\d+(\.\d+)?$/.test(t));
+        const codigo0 = `datos = [${trozos.join(", ")}]\n`;
+        if (malo !== undefined || !trozos.length) {
+          const e = !trozos.length ? errorPy("ValueError", "histograma: la lista está vacía") : errorPy("NameError", `name '${malo}' is not defined`);
+          return { elementos: errorEnTerminal(e, 46), ancho: 46, alto: 6, codigo: codigo0, res: res("lanza", e.tipo) };
+        }
+        const ns = trozos.map(Number), e = estadisticasJS(ns);
+        const clases = [...e.veces.keys()].sort((a, b) => a - b).map(v => [textoEst(v), e.veces.get(v)]);
+        const h = histogramaJS(clases, p.alto), t = tablaFilas(e.filas, null);
+        const codigo = codigo0 + llamada("histograma", [{ crudo: "datos" }, 1, 1], [["alto", p.alto === 10 ? null : p.alto]]) + "\n" +
+          llamada("estadisticas", [{ crudo: "datos" }, h.ancho + 4, 1], []);
+        return { elementos: [arteDe(h.filas), arteDe(t, h.ancho + 4, 1)], ancho: h.ancho + 4 + anchoDe(t) + 1, alto: Math.max(h.alto, t.length), codigo,
+          res: res("media()", textoEst(e.media, 4) + "   desviacion() " + textoEst(e.desviacion, 4)) };
+      },
+    },
+    polinomio: {
+      nuevo: true, cat: "polinomios", titulo: "pantalla.polinomio()",
+      desc: "Un polinomio escrito como en clase (con ^, ** o ³). Se suma, se resta y se multiplica con + - *, se evalúa con p(2) y tiene derivada().",
+      alto: 7,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["p             → 2x³ - 3x + 1", "q             → x² - 1", "p + q         → 2x³ + x² - 3x", "p * q         → 2x⁵ - 5x³ + x² + 3x - 1", "p(2)          → 11", "p.derivada()  → 6x² - 3", "p.grado       → 3"], "colores": ["GGGGGGGGGGGGGGggVVVVVVVVVVVV", "GGGGGGGGGGGGGGggVVVVVV", "GGGGGGGGGGGGGGggVVVVVVVVVVVVV", "GGGGGGGGGGGGGGggVVVVVVVVVVVVVVVVVVVVVVV", "GGGGGGGGGGGGGGggVV", "GGGGGGGGGGGGGGggVVVVVVV", "GGGGGGGGGGGGGGggV"]}], ancho: 41, alto: 7, codigo: "p = pantalla.polinomio(\"2x^3 - 3x + 1\")\nq = pantalla.polinomio(\"x^2 - 1\")\n\nprint(p + q)            # 2x³ + x² - 3x\nprint(p * q)            # 2x⁵ - 5x³ + x² + 3x - 1\nprint(p(2))             # 11\nprint(p.derivada())     # 6x² - 3\nc, r = pantalla.dividir_polinomios(p, q)", res: res("p(2) devuelve", "11") }),
+    },
+    factorizar_polinomio: {
+      nuevo: true, cat: "polinomios", titulo: "pantalla.factorizar_polinomio() y raices()",
+      desc: "Busca las raíces (las que son fracciones, con Ruffini) y escribe el polinomio factorizado. Con pasos=True enseña cada Ruffini. raices() devuelve la lista.",
+      alto: 14,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["x = 0 es raíz: x³ - x = x·(x² - 1)", "x = 1 es raíz:", "  │   1   0  -1", "1 │       1   1", "──┼────────────", "  │   1   1   0", "Cociente: x + 1    Resto: 0", "x = -1 es raíz:", "   │   1   1", "-1 │      -1", "───┼────────", "   │   1   0", "Cociente: 1    Resto: 0", "x³ - x = x·(x - 1)·(x + 1)"], "colores": ["                                  ", "              ", "               ", "               ", "               ", "            aaa", "                           ", "               ", "            ", "            ", "            ", "         aaa", "                       ", "                          "]}], ancho: 38, alto: 14, codigo: "pantalla.factorizar_polinomio(\"x^3 - x\", pasos=True)\n\nprint(pantalla.raices(\"x^3 - x\"))                  # [-1, 0, 1]\nprint(pantalla.factorizar_polinomio(\"2x^2 - 2\"))   # 2·(x - 1)·(x + 1)", res: res("devuelve", "'x·(x - 1)·(x + 1)'") }),
+    },
+    interseccion_rectas: {
+      nuevo: true, cat: "rectas", titulo: "interseccion_rectas() y distancia_punto_recta()",
+      desc: "Dónde se cortan dos rectas (o si son paralelas), el ángulo entre ellas y la distancia de un punto a una recta. Las rectas pueden ir escritas como texto.",
+      alto: 5,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["{ 2x - y + 1 = 0", "{ x + y - 4 = 0", "Se cortan en (1, 3)", "", "d = |3·0 + 4·0 + (-10)| / √(3² + 4²) = 10 / 5 = 2"], "colores": ["                ", "               ", "                   ", "", "                                                 "]}], ancho: 51, alto: 5, codigo: "pantalla.interseccion_rectas(\"y = 2x + 1\", \"x + y = 4\", pasos=True)\npantalla.distancia_punto_recta((0, 0), \"3x + 4y - 10 = 0\", pasos=True)\n\nprint(pantalla.posicion_rectas(\"y = 2x\", \"y = 2x + 1\"))   # paralelas\nprint(pantalla.angulo_rectas(\"y = x\", \"y = -x\"))       # 90.0", res: res("devuelve", "(1, 3)") }),
+    },
+    tabla_frecuencias: {
+      nuevo: true, cat: "estadistica", titulo: "pantalla.tabla_frecuencias()",
+      desc: "La tabla de frecuencias: absoluta (fᵢ), acumulada (Fᵢ), relativa (hᵢ) y el tanto por ciento. Con intervalos=5 agrupa los datos en 5 intervalos.",
+      alto: 11,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["┌───────┬────┬────┬───────┬────────┐", "│ xᵢ    │ fᵢ │ Fᵢ │ hᵢ    │ %      │", "├───────┼────┼────┼───────┼────────┤", "│ 4     │  1 │  1 │ 0.125 │ 12.5 % │", "│ 5     │  1 │  2 │ 0.125 │ 12.5 % │", "│ 6     │  1 │  3 │ 0.125 │ 12.5 % │", "│ 7     │  3 │  6 │ 0.375 │ 37.5 % │", "│ 8     │  1 │  7 │ 0.125 │ 12.5 % │", "│ 9     │  1 │  8 │ 0.125 │ 12.5 % │", "│ Total │  8 │    │     1 │  100 % │", "└───────┴────┴────┴───────┴────────┘"], "colores": ["                                    ", "  ccccc   cc   cc   ccccc   cccccc  ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    "]}], ancho: 38, alto: 11, codigo: "notas = [5, 7, 7, 8, 6, 9, 7, 4]\npantalla.tabla_frecuencias(notas)\n\nprint(pantalla.media(notas))      # 6.625\nprint(pantalla.mediana(notas))    # 7\nprint(pantalla.moda(notas))       # 7", res: res("devuelve", "{'4': 1, '5': 1, '6': 1, '7': 3, '8': 1, '9': 1}") }),
+    },
+    practicar: {
+      nuevo: true, cat: "practicar", titulo: "pantalla.practicar()",
+      desc: "Pone ejercicios del tema que digas, corrige cada respuesta (y dice por qué) y al final saca la nota. Temas: tablas, fracciones, ecuaciones, potencias, binario, vectores...",
+      alto: 10,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["── Tablas de multiplicar · 4 preguntas · escribe \"salir\" para acabar ──", "1) 6 × 7 = 42", "   ¡Bien! ✓", "2) 2 × 9 = 16", "   No, era 18. 2 × 9 = 18", "3) 5 × 2 = 10", "   ¡Bien! ✓", "4) 4 × 3 = 12", "   ¡Bien! ✓", "Has acertado 3 de 4  ★★★★☆  Nota: 7.5"], "colores": ["ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "             ", "VVVVVVVVVVV", "             ", "RRRRRRRRRRRRRRRgggggggggg", "             ", "VVVVVVVVVVV", "             ", "VVVVVVVVVVV", "VVVVVVVVVVVVVVVVVVVVVVVVVVVVggggggggg"]}], ancho: 73, alto: 10, codigo: "aciertos = pantalla.practicar(\"tablas\", 4)\npantalla.practicar(\"fracciones\", 10, nivel=2)\npantalla.practicar()     # te deja elegir el tema", res: res("devuelve", "3") }),
+    },
+    guardar_record: {
+      nuevo: true, cat: "practicar", titulo: "pantalla.guardar_record() y tabla_records()",
+      desc: "Guarda la puntuación en un archivo junto a tu programa y te dice en qué puesto ha quedado. tabla_records() dibuja los mejores.",
+      alto: 9,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["┌───┬────────┬────────┬────────────┐", "│ # │ Nombre │ Puntos │ Fecha      │", "├───┼────────┼────────┼────────────┤", "│ 1 │ Marta  │    150 │ 2026-11-05 │", "│ 2 │ Eva    │    130 │ 2026-11-05 │", "│ 3 │ Ana    │    120 │ 2026-11-05 │", "│ 4 │ Luis   │     95 │ 2026-11-05 │", "│ 5 │ Pablo  │     80 │ 2026-11-05 │", "└───┴────────┴────────┴────────────┘"], "colores": ["                                    ", "  a   aaaaaa   aaaaaa   aaaaaaaaaa  ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    ", "                                    "]}], ancho: 38, alto: 9, codigo: "puesto = pantalla.guardar_record(\"Eva\", 130)     # 2\nif puesto == 1:\n    print(\"¡Nuevo récord!\")\n\npantalla.tabla_records()\nprint(pantalla.mejor_record())                    # 150\npantalla.guardar_record(\"Ana\", 34.5, \"tiempos.json\", menos_es_mejor=True)", res: res("guardar_record() devuelve", "2") }),
+    },
+    cronometro: {
+      nuevo: true, cat: "practicar", titulo: "pantalla.cronometro() y cuenta_atras()",
+      desc: "Un cronómetro que empieza al crearlo (parar(), empezar() y reiniciar()) y una cuenta atrás de 3, 2, 1, ¡Ya!, un número cada segundo.",
+      alto: 3,
+      vista: () => ({ elementos: [{"tipo": "arte", "x": 1, "y": 1, "lineas": ["Has tardado 00:12.3", "", "3  2  1  ¡Ya!"], "colores": ["            ccccccc", "", "aaaaaaaaaaaaa"]}], ancho: 38, alto: 3, codigo: "pantalla.cuenta_atras(3)\nc = pantalla.cronometro()\npantalla.pedir(\"Pulsa Enter cuando quieras... \")\nprint(\"Has tardado\", c)     # 00:12.3\nprint(c.segundos)         # 12.34", res: res("c.segundos", "12.34") }),
+    },
   };
   Object.entries(INTER).forEach(([n, x]) => {
     if (!x.nuevo || EJEMPLOS.some(e => e.nombre === n)) return;
@@ -5923,7 +6267,9 @@ const Docs = (() => {
   const CATS = [
     { id: "texto", label: "Texto" }, { id: "dibujo", label: "Dibujar" }, { id: "letras", label: "Letras grandes" },
     { id: "arte", label: "Arte ASCII" }, { id: "raton", label: "Ratón y botones" }, { id: "componentes", label: "Cosas ya hechas" },
-    { id: "mates", label: "Matemáticas" }, { id: "vectores", label: "Vectores" }, { id: "graficas", label: "Gráficas" },
+    { id: "mates", label: "Matemáticas" }, { id: "vectores", label: "Vectores" }, { id: "rectas", label: "Rectas" },
+    { id: "polinomios", label: "Polinomios" }, { id: "estadistica", label: "Estadística" }, { id: "graficas", label: "Gráficas" },
+    { id: "practicar", label: "Practicar y récords" },
     { id: "spinners", label: "Spinners" }, { id: "juegos", label: "Juegos" }, { id: "control", label: "Teclado y control" },
     { id: "avanzado", label: "Avanzado" },
   ];
@@ -6149,6 +6495,11 @@ const Docs = (() => {
     table: "tabla", chart: "grafica", plot: "grafica", graph: "grafica", font: "fuente", game: "jugar", matrix: "matriz",
     fraction: "fraccion", vectors: "vector", dot: "producto escalar", cross: "producto vectorial", norm: "modulo", magnitude: "modulo", arrow: "flechas", prime: "primo", gcd: "mcd", lcm: "mcm", title: "titulo", big: "grande", line: "linea", select: "elegir",
     choose: "elegir", form: "formulario", spin: "spinner", draw: "dibujar", text: "texto", write: "escribir", colour: "color",
+    polynomial: "polinomio", roots: "raices", raiz: "raices", factor: "factorizar", cuadratica: "segundo grado", bhaskara: "segundo grado",
+    discriminante: "segundo grado", lines: "recta", pendiente: "recta", promedio: "media", average: "media", mean: "media",
+    median: "mediana", mode: "moda", stats: "estadisticas", frecuencias: "tabla frecuencias", binary: "binario", binario: "base",
+    hex: "hexadecimal", hexadecimal: "base", decimal: "base", ejercicios: "practicar", quiz: "practicar", examen: "practicar",
+    score: "record", highscore: "record", puntuacion: "record", timer: "cronometro", reloj: "cronometro", countdown: "cuenta atras",
   };
   let INDICE = null;
   function indiceBusqueda() {
@@ -6406,7 +6757,7 @@ const Inicio = (() => {
     fs = Math.max(8, Math.min(18, fs));
   }
   function elementos() {
-    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.5" }];
+    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.6" }];
     const menuEl = { tipo: "menu", opciones: OPCIONES, titulo: "¿Qué quieres hacer?", ayudas: OPCIONES.map(o => AYUDA[o]), color: "cian" };
     const g = menuGeom(menuEl);
     let fuente = null, titulo = null;
@@ -6457,7 +6808,7 @@ const Inicio = (() => {
     try { reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     if (reducido) { fase = "menu"; dibujar(); return; }
     fase = "arranque";
-    tipeo = { lineas: ["Python 3 · pantalla 0.5 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
+    tipeo = { lineas: ["Python 3 · pantalla 0.6 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
     tipeo.lineas[0] = tipeo.lineas[0].slice(0, cols);
     tipeo.letra = tipeo.lineas[0].length;
     dibujarArranque();
@@ -6564,7 +6915,7 @@ const Inicio = (() => {
     l.push("AYUDA = {");
     OPCIONES.forEach(o => l.push(`    ${py(o)}: ${py(AYUDA[o])},`));
     l.push("}", "", "pantalla.limpiar()");
-    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.5"]]));
+    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.6"]]));
     if (g.fuente) l.push(llamada("grande", ["pantalla"], [["y", g.yTitulo], ["fuente", g.fuente === "bloques" ? null : g.fuente], ["color", "amarillo"]]));
     l.push(llamada("centrar", [g.sub], [["y", g.ySub], ["color", "gris claro"]]));
     l.push(llamada("centrar", [g.pie], [["y", g.yPie], ["color", "gris"]]));

@@ -173,13 +173,13 @@ class TestDibujar(Base):
 
     def test_estilos(self):
         fino = sin_colores(self.captura(pantalla.dibujar_vectores, [(5, 0), (3, 2)]))
-        self.assertTrue(any("⠀" < ch <= "⣿" for ch in fino), fino)
+        self.assertTrue(any(0x2800 < ord(ch) <= 0x28ff for ch in fino), fino)
         self.assertNotIn("╱", fino)
         # una raya por el eje sale recta, en la misma fila que el eje
         fila = [l for l in fino.split("\n") if "┼" in l][0]
         self.assertIn("⠤⠤⠤", fila)
         rayas = sin_colores(self.captura(pantalla.dibujar_vectores, [(5, 0), (3, 2)], estilo="rayas"))
-        self.assertFalse(any("⠀" <= ch <= "⣿" for ch in rayas), rayas)
+        self.assertFalse(any(0x2800 <= ord(ch) <= 0x28ff for ch in rayas), rayas)
         self.assertIn("╱", rayas)
         # en los bordes no se sale del dibujo
         for v in ([(-34, -31), (-1, 1)], [(5, 1), (-11, 6)], [(-34, -12)]):
