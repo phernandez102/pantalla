@@ -619,6 +619,8 @@ En el constructor puedes ponerle **nombre** a cualquier cosa, y hay una herramie
 
 También vale guardar el diseño en un archivo `mi_pantalla.json` y hacer `pantalla.diseno("mi_pantalla.json")`. Con `centrado=True` se coloca en el centro de la terminal, aunque sea más grande que el diseño.
 
+En la misma web está la **documentación**: cada función con un ejemplo que se dibuja como en la terminal. Arriba tienes un buscador (pulsa `/` o Ctrl+K) que también entiende palabras en inglés como `loading` o `input`. En las gráficas, `barras()`, `mcd()` o `descomponer()` mueves los deslizadores y el dibujo cambia al momento. Salen las mismas cuentas que en Python, así que lo que ves es lo que te va a salir.
+
 ## Ejemplos
 
 En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil al más difícil:

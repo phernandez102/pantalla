@@ -426,8 +426,75 @@ body.probando #celda-luz, body.probando #fila-luz, body.probando #col-luz { disp
 .instalar a:hover { text-decoration: underline; }
 .docs-cuerpo { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 32px; align-items: start; }
 .docs-main { min-width: 0; }
-.doc-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; z-index: 5; }
-.doc-side-btn { display: none; }
+.doc-side { position: sticky; top: 76px; max-height: calc(100vh - 92px); display: flex; flex-direction: column; z-index: 5; }
+
+/* barra de arriba: entera al principio y una pastilla al bajar */
+.docs-nav { position: sticky; top: 8px; z-index: 40; margin: -5px -6px 14px; pointer-events: none; }
+.docs-nav-in {
+  pointer-events: auto; display: flex; align-items: center; gap: 8px; width: 100%; margin: 0 auto; padding: 5px 5px 5px 6px;
+  border: 1px solid transparent; border-radius: 99px;
+  transition: width .4s cubic-bezier(.2,.7,.2,1), padding .4s cubic-bezier(.2,.7,.2,1), background-color .25s, box-shadow .25s, border-color .25s;
+}
+.docs-nav.pill .docs-nav-in {
+  width: min(760px, 100%); border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 84%, transparent); box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px) saturate(1.3); -webkit-backdrop-filter: blur(12px) saturate(1.3);
+}
+.nav-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none; height: 34px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 99px; background: var(--paper); color: var(--muted);
+  font-size: 0.84rem; font-weight: 500; cursor: pointer; transition: color .15s, border-color .15s, background .15s;
+}
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.nav-btn .lc { width: 15px; height: 15px; }
+.docs-nav.pill .nav-volver { padding: 0 10px; }
+.docs-nav.pill .nav-volver span { display: none; }
+.nav-marca, .nav-actual, .nav-subir { display: none; }
+.docs-nav.pill .nav-marca {
+  display: block; flex: none; border: 0; background: none; padding: 0 2px; cursor: pointer;
+  font-family: var(--f-mono); font-size: 0.9rem; font-weight: 700; color: var(--ink);
+}
+.nav-marca span { color: var(--accent); }
+.docs-nav.pill .nav-actual {
+  display: block; min-width: 0; flex: 0 1 auto; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--f-mono); font-size: 0.8rem; color: var(--accent);
+}
+.docs-nav.pill .nav-actual:not(:empty)::before { content: "›"; margin-right: 6px; color: var(--muted); }
+.docs-nav.pill .nav-subir { display: inline-flex; width: 34px; padding: 0; animation: aparecer .25s both; }
+.nav-indice { display: none; }
+.buscador { position: relative; flex: 1 1 auto; min-width: 0; max-width: 440px; margin-left: auto; }
+.docs-nav.pill .buscador { max-width: none; }
+.buscador::before {
+  content: ""; position: absolute; left: 13px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); pointer-events: none;
+  background: var(--muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.buscador input {
+  width: 100%; height: 34px; padding: 0 36px 0 36px; border: 1px solid var(--line); border-radius: 99px;
+  background: var(--paper); color: var(--ink); font-size: 0.86rem; transition: border-color .15s, box-shadow .15s;
+}
+.buscador input::-webkit-search-cancel-button { display: none; }
+.buscador input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.buscar-atajo {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;
+  font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 6px;
+}
+.buscador:focus-within .buscar-atajo { display: none; }
+.buscar-lista {
+  position: absolute; left: 0; right: 0; top: calc(100% + 8px); margin: 0; padding: 6px; list-style: none; z-index: 50;
+  max-height: min(60vh, 440px); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); box-shadow: var(--shadow-lg);
+  animation: aparecer .15s both;
+}
+.buscar-lista li { padding: 8px 10px; border-radius: 8px; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
+.buscar-lista li[aria-selected="true"] { background: var(--accent-soft); }
+.buscar-lista b { font-family: var(--f-mono); font-size: 0.84rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.buscar-lista .cat { font-size: 0.72rem; color: var(--muted); align-self: center; }
+.buscar-lista small { grid-column: 1 / -1; font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.buscar-lista mark { background: none; color: var(--accent); font-weight: 700; }
+.buscar-lista li.nada { cursor: default; display: block; color: var(--muted); font-size: 0.84rem; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .doc-arbol { --rama: color-mix(in srgb, var(--muted) 42%, transparent); overflow-y: auto; overscroll-behavior: contain; padding: 2px 6px 18px 2px; font-family: var(--f-mono); font-size: 0.8rem; scrollbar-width: thin; }
 .arbol-grupo { margin-bottom: 4px; }
 .arbol-cat {
@@ -451,14 +518,14 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 .doc-arbol li.activo button { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 .doc-arbol li.activo::before { border-color: var(--accent); }
 .doc-arbol button:focus-visible { outline-offset: -2px; }
-.doc-grupo { margin-bottom: 40px; scroll-margin-top: 16px; }
+.doc-grupo { margin-bottom: 40px; scroll-margin-top: 72px; }
 .doc-grupo-t {
   display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-family: var(--f-mono); font-size: 0.78rem;
   font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
 }
 .doc-grupo-t::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .doc-filas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 20px; }
-.doc-card { background: var(--paper); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 16px; transition: box-shadow .3s; }
+.doc-card { background: var(--paper); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 72px; transition: box-shadow .3s; }
 .doc-card.destacada { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
 @supports (grid-template-rows: subgrid) {
   .doc-card { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; margin-bottom: 20px; }
@@ -483,7 +550,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 .doc-code .str { color: var(--sel); }
 .doc-code .cmt { color: var(--ruler); font-style: italic; }
 .doc-code .num { color: #c026d3; }
-.doc-seccion { margin-top: 40px; scroll-margin-top: 16px; }
+.doc-seccion { margin-top: 40px; scroll-margin-top: 72px; }
 .doc-seccion h3 { font-family: var(--f-mono); font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; }
 .doc-seccion h3 span { color: var(--accent); }
 .doc-seccion > p { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px; max-width: 75ch; }
@@ -600,7 +667,11 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 .doc-ctl input[type="number"] { width: 64px; font-family: var(--f-mono); }
 .doc-ctl textarea { font-family: var(--f-mono); width: 100%; min-height: 58px; resize: vertical; font-size: 0.78rem; }
 .doc-ctl label:has(textarea) { flex-basis: 100%; }
-.doc-ctl input[type="range"] { width: 150px; accent-color: var(--accent); }
+.doc-ctl input[type="range"] { width: 150px; height: 26px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.doc-ctl label.desliza { flex: 1 1 140px; max-width: 230px; }
+.doc-ctl label.desliza input { width: 100%; }
+.desliza-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.desliza output { font-family: var(--f-mono); font-size: 0.76rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .doc-ctl .casilla { font-size: 0.8rem; font-weight: 500; align-self: end; padding-bottom: 6px; }
 .doc-ctl .car-fila input { width: 46px !important; text-align: center; font-family: var(--f-mono); }
 .doc-ctl input:focus, .doc-ctl select:focus, .doc-ctl textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -636,21 +707,33 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 @media (max-width: 980px) {
   .docs-cuerpo { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .doc-side {
-    top: 0; max-height: none; z-index: 20; margin: 0 -16px 18px; padding: 8px 16px;
-    background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
+    position: fixed; top: 58px; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+    max-height: none; z-index: 45; pointer-events: none;
   }
-  .doc-side-btn {
-    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line);
-    border-radius: 99px; background: var(--paper); font-family: var(--f-mono); font-size: 0.86rem; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm);
-  }
-  .doc-side-btn .lc { width: 16px; height: 16px; color: var(--accent); }
-  .doc-side-actual { margin-left: auto; min-width: 0; color: var(--accent); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .doc-arbol { display: none; max-height: min(62vh, 520px); margin-top: 8px; padding: 10px 8px 12px; background: var(--paper); border-radius: var(--r-sm); box-shadow: var(--shadow-lg); border: 1px solid var(--line); }
+  .doc-arbol { display: none; pointer-events: auto; max-height: min(66vh, 540px); padding: 10px 8px 12px; background: var(--paper); border-radius: var(--r-sm); box-shadow: var(--shadow-lg); border: 1px solid var(--line); animation: aparecer .15s both; }
   .doc-side.abierto .doc-arbol { display: block; }
   .doc-arbol li button { padding: 8px 8px; }
   .doc-arbol li::before { height: 18px; }
-  .doc-grupo, .doc-card, .doc-seccion { scroll-margin-top: 76px; }
+  .nav-volver { padding: 0 10px; }
+  .nav-volver span { display: none; }
+  .docs-nav.pill .nav-marca, .docs-nav.pill .nav-actual { display: none; }
+  .nav-indice { display: inline-flex; min-width: 0; flex: 1 1 auto; justify-content: flex-start; font-family: var(--f-mono); font-weight: 700; color: var(--ink); }
+  /* en el móvil el buscador es solo la lupa hasta que lo tocas */
+  .buscador { flex: 0 0 34px; margin-left: 0; }
+  .buscador input { padding: 0; color: transparent; cursor: pointer; }
+  .buscador input::placeholder { color: transparent; }
+  .buscador::before { left: 10px; }
+  .buscador:focus-within { flex: 1 1 auto; }
+  .buscador:focus-within input { padding: 0 14px 0 36px; color: var(--ink); cursor: text; }
+  .buscador:focus-within input::placeholder { color: var(--muted); }
+  .docs-nav-in:has(.buscador:focus-within) .nav-indice { display: none; }
+  .nav-indice .lc { color: var(--accent); flex: none; }
+  .nav-indice-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-indice[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .buscador { max-width: none; }
+  .buscar-atajo { display: none; }
+  .buscar-lista { position: fixed; top: 58px; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); }
+  .doc-grupo, .doc-card, .doc-seccion { scroll-margin-top: 66px; }
 }
 @media (max-width: 760px) {
   .banco { grid-template-columns: minmax(0, 1fr); }
@@ -869,16 +952,29 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 </div><!-- /app-constructor -->
 
 <div id="app-docs" hidden>
-<button class="volver-btn" data-volver>← Inicio</button>
+<div class="docs-nav" id="docs-nav">
+  <nav class="docs-nav-in" aria-label="Documentación">
+    <button type="button" class="nav-btn nav-volver" id="nav-volver" title="Volver al inicio"><span>Inicio</span></button>
+    <button type="button" class="nav-marca" id="nav-marca" tabindex="-1" aria-hidden="true">pantalla<span>.</span>docs</button>
+    <span class="nav-actual" id="nav-actual" aria-hidden="true"></span>
+    <button type="button" class="nav-btn nav-indice" id="nav-indice" aria-expanded="false" aria-controls="doc-arbol"><span class="nav-indice-txt" id="nav-indice-txt">Índice</span></button>
+    <div class="buscador" id="buscador">
+      <input type="search" id="buscar" placeholder="Buscar una función…" autocomplete="off" spellcheck="false"
+        role="combobox" aria-expanded="false" aria-controls="buscar-lista" aria-autocomplete="list" aria-label="Buscar en la documentación">
+      <kbd class="buscar-atajo" aria-hidden="true">/</kbd>
+      <ul class="buscar-lista" id="buscar-lista" role="listbox" aria-label="Resultados" hidden></ul>
+    </div>
+    <button type="button" class="nav-btn nav-subir" id="nav-subir" title="Volver arriba" aria-label="Volver arriba"></button>
+  </nav>
+</div>
 
-<section class="docs" id="docs">
+<section class="docs" id="docs-ref">
   <h2 class="docs-titulo">pantalla<span>.</span>docs</h2>
   <p class="docs-sub">Referencia visual de la librería <code>pantalla</code>. Cada función tiene un ejemplo que se dibuja en vivo, igual que en la terminal de verdad: cambia sus opciones, mira girar los spinners, juega a los minijuegos y copia el código.</p>
   <p class="instalar"><code>pip install pantalla</code><a href="https://github.com/phernandez102/pantalla" target="_blank" rel="noopener">GitHub</a><a href="https://pypi.org/project/pantalla/" target="_blank" rel="noopener">PyPI</a></p>
 
   <div class="docs-cuerpo">
   <aside class="doc-side" id="doc-side">
-    <button type="button" class="doc-side-btn" id="doc-side-btn" aria-expanded="false" aria-controls="doc-arbol"><span class="doc-side-ico" aria-hidden="true"></span>Índice <span class="doc-side-actual" id="doc-side-actual"></span></button>
     <nav class="doc-arbol" id="doc-arbol" aria-label="Índice de la documentación"></nav>
   </aside>
   <div class="docs-main">
@@ -4712,7 +4808,324 @@ const Docs = (() => {
     };
   }
 
+  // las mismas cuentas que graficas.py y numeros.py, para que salga igual que en la terminal
+  const redondoPy = v => { const r = Math.round(v); return Math.abs(v % 1) === 0.5 && r % 2 ? r - 1 : r; };
+  const errorPy = (tipo, msg) => Object.assign(new Error(msg), { tipo });
+  function g2(n) {
+    const [m, e] = n.toExponential(1).split("e");
+    const exp = +e;
+    if (exp < -4 || exp >= 2) return m.replace(/\.?0+$/, "") + "e" + (exp < 0 ? "-" : "+") + String(Math.abs(exp)).padStart(2, "0");
+    return n.toFixed(Math.max(0, 1 - exp)).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  }
+  function textoCorto(n) {
+    if (Number.isInteger(n) && Math.abs(n) < 1e9) return String(n === 0 ? 0 : n);
+    if (Math.abs(n) >= 1e5 || (Math.abs(n) < 1e-3 && n !== 0)) return g2(n);
+    // python redondea los empates al par (3.125 -> 3.12) y toFixed hacia arriba
+    const empate = Number.isInteger(n * 8) && !Number.isInteger(n * 4);
+    return (empate ? redondoPy(n * 100) / 100 : n).toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  }
+  const numeroPy = v => Number.isInteger(v) ? String(v) : textoCorto(v);
+  function valorEn(f, x) {
+    let y;
+    try { y = f(x); } catch (e) { return null; }
+    return typeof y === "number" && Number.isFinite(y) ? y : null;
+  }
+  function rangoY(series, minimo, maximo) {
+    const buenos = series.flat().filter(v => v !== null).sort((a, b) => a - b);
+    let bajo, alto;
+    if (!buenos.length) { bajo = -1; alto = 1; }
+    else {
+      bajo = buenos[0]; alto = buenos[buenos.length - 1];
+      const k = Math.max(1, Math.floor(buenos.length / 20));
+      if (buenos.length > 10) {
+        const pb = buenos[k], pa = buenos[buenos.length - 1 - k], hueco = Math.max(pa - pb, 1e-9);
+        if (alto - bajo > 10 * hueco) { bajo = pb - hueco * 0.5; alto = pa + hueco * 0.5; }
+      }
+      if (0 < bajo && bajo < (alto - bajo) * 0.1) bajo = 0;
+      else if (-(alto - bajo) * 0.1 < alto && alto < 0) alto = 0;
+    }
+    const margen = (alto - bajo) * 0.01;
+    if (Math.abs(bajo - redondoPy(bajo)) < margen) bajo = redondoPy(bajo);
+    if (Math.abs(alto - redondoPy(alto)) < margen) alto = redondoPy(alto);
+    if (minimo != null) bajo = minimo;
+    if (maximo != null) alto = maximo;
+    if (alto <= bajo) { const b = bajo; bajo = b - 1; alto = b + 1; }
+    return [bajo, alto];
+  }
+  const COLORES_GRAFICA = ["cian", "amarillo", "verde claro", "morado claro", "rojo claro", "azul claro"];
+  function graficaArte(funciones, desde, hasta, o) {
+    const { ancho = 50, alto = 15, color = null, caracter = "•", ejes = true } = o;
+    if (ancho < 12 || alto < 4) throw errorPy("ValueError", "grafica: es muy pequeña. Ponle por lo menos ancho=12 y alto=4");
+    if (!funciones.length) throw errorPy("TypeError", "grafica: dame una función (por ejemplo lambda x: x * x) o una lista de números");
+    if (hasta <= desde) throw errorPy("ValueError", `grafica: 'hasta' (${textoCorto(hasta)}) tiene que ser mayor que 'desde' (${textoCorto(desde)})`);
+    const altoD = alto - 1;
+    let anchoNum = 1, anchoD = 0, xs = [], series = [], bajo = -1, arriba = 1;
+    for (let vuelta = 0; vuelta < 2; vuelta++) {
+      anchoD = ancho - anchoNum - 1;
+      xs = [];
+      for (let i = 0; i < anchoD; i++) xs.push(desde + (hasta - desde) * i / Math.max(1, anchoD - 1));
+      series = funciones.map(f => xs.map(x => valorEn(f, x)));
+      [bajo, arriba] = rangoY(series, null, null);
+      const et = [textoCorto(arriba), textoCorto(bajo)];
+      if (bajo < 0 && 0 < arriba) et.push("0");
+      const nuevo = Math.max(...et.map(e => e.length));
+      if (nuevo === anchoNum) break;
+      anchoNum = nuevo;
+    }
+    const filaDe = v => redondoPy((arriba - v) / (arriba - bajo) * (altoD - 1));
+    const celdas = Array.from({ length: altoD }, () => Array.from({ length: anchoD }, () => [" ", null]));
+    const filaCero = bajo <= 0 && 0 <= arriba ? filaDe(0) : null;
+    const colCero = desde <= 0 && 0 <= hasta ? redondoPy(-desde / (hasta - desde) * (anchoD - 1)) : null;
+    if (ejes) {
+      if (filaCero !== null) for (let c = 0; c < anchoD; c++) celdas[filaCero][c] = ["─", "gris"];
+      if (colCero !== null) for (let f = 0; f < altoD; f++) celdas[f][colCero] = [f === filaCero ? "┼" : "│", "gris"];
+    }
+    series.forEach((serie, s) => {
+      const cod = color && series.length === 1 ? color : COLORES_GRAFICA[s % COLORES_GRAFICA.length];
+      let anterior = null;
+      serie.forEach((v, c) => {
+        if (v === null || !(bajo - 1e-9 <= v && v <= arriba + 1e-9)) { anterior = null; return; }
+        const f = filaDe(v);
+        celdas[f][c] = [caracter, cod];
+        // si de una columna a la siguiente da un salto, se rellena para que se vea seguida
+        if (anterior !== null && Math.abs(f - anterior) > 1) {
+          const paso = f > anterior ? 1 : -1, mitad = Math.floor((anterior + f) / 2);
+          for (let g = anterior + paso; g !== f; g += paso) celdas[g][(g - mitad) * paso <= 0 ? c - 1 : c] = [caracter, cod];
+        }
+        anterior = f;
+      });
+    });
+    const lineas = [], colores = [];
+    for (let f = 0; f < altoD; f++) {
+      const numero = f === 0 ? textoCorto(arriba) : f === altoD - 1 ? textoCorto(bajo) : f === filaCero ? "0" : "";
+      let l = numero.padStart(anchoNum) + " ", c = "g".repeat(anchoNum + 1);
+      celdas[f].forEach(([ch, n]) => { l += ch; c += n ? CODIGO_DE[n] : " "; });
+      l = l.replace(/ +$/, "");
+      lineas.push(l); colores.push(c.slice(0, letras(l).length));
+    }
+    const izq = textoCorto(desde), der = textoCorto(hasta);
+    let abajo = " ".repeat(anchoNum + 1) + izq;
+    if (colCero !== null && desde !== 0 && hasta !== 0) {
+      const pos = anchoNum + 1 + colCero;
+      if (pos > abajo.length + 1 && pos < ancho - der.length - 1) abajo += " ".repeat(pos - abajo.length) + "0";
+    }
+    abajo += der.padStart(ancho - abajo.length);
+    lineas.push(abajo); colores.push("g".repeat(abajo.length));
+    return { lineas, colores, xs, series, x0: anchoNum + 1, filaDe, bajo, arriba };
+  }
+  // el error tal cual lo enseña python, partido para que quepa
+  function errorEnTerminal(e, ancho) {
+    const palabras = (e.tipo + ": " + e.message).split(" "), lineas = [""];
+    palabras.forEach(w => { const l = lineas[lineas.length - 1]; if (l && letras(l + " " + w).length > ancho - 2) lineas.push(w); else lineas[lineas.length - 1] = l ? l + " " + w : w; });
+    return [{ tipo: "texto", x: 2, y: 1, texto: "Traceback (most recent call last):", color: "gris" },
+      { tipo: "texto", x: 2, y: 2, texto: "  ...", color: "gris" }].concat(lineas.map((l, i) => ({ tipo: "texto", x: 2, y: 3 + i, texto: l, color: "rojo claro" })));
+  }
+  // para mover un punto con el ratón por encima de la gráfica
+  function ratonGrafica(s, ev, c) {
+    const h = ev.type === "pointerleave" || ev.type === "pointercancel" ? null : c.x;
+    if (s.hover === h) return false;
+    s.hover = h;
+    return true;
+  }
+  const coef = (a, t) => a === 1 ? t : a === -1 ? "-" + t : py(a) + " * " + t;
+  const mas = b => !b ? "" : b > 0 ? " + " + py(b) : " - " + py(-b);
+  const FUNCIONES = {
+    "a·x² + b": { py: (a, b) => coef(a, "x * x") + mas(b), f: (a, b) => x => a * x * x + b },
+    "a·sin(b·x)": { py: (a, b) => coef(a, "math.sin(" + coef(b, "x") + ")"), f: (a, b) => x => a * Math.sin(b * x), math: true },
+    "a / x + b": { py: (a, b) => py(a) + " / x" + mas(b), f: (a, b) => x => a / x + b },
+    "x³ − a·x + b": { py: (a, b) => "x * x * x" + (a ? (a > 0 ? " - " : " + ") + coef(Math.abs(a), "x") : "") + mas(b), f: (a, b) => x => x * x * x - a * x + b },
+    "a·√x + b": { py: (a, b) => coef(a, "math.sqrt(x)") + mas(b), f: (a, b) => x => a * Math.sqrt(x) + b, math: true },
+  };
+  const VARIAS = [
+    ["math.sin", "math.sin", Math.sin, true], ["math.cos", "math.cos", Math.cos, true],
+    ["sin(2x)", "lambda x: math.sin(2 * x)", x => Math.sin(2 * x), false], ["x / 4", "lambda x: x / 4", x => x / 4, false],
+  ];
+  const ESCALONES = "▁▂▃▄▅▆▇█";
+  function minigraficaPy(numeros, minimo, maximo) {
+    if (!numeros.length) return "";
+    const bajo = minimo == null ? Math.min(...numeros) : minimo, alto = maximo == null ? Math.max(...numeros) : maximo;
+    if (alto <= bajo) return ESCALONES[3].repeat(numeros.length);
+    return numeros.map(v => ESCALONES[redondoPy((Math.min(Math.max(v, bajo), alto) - bajo) / (alto - bajo) * 7)]).join("");
+  }
+  const mcdPy = (a, b) => { while (b) [a, b] = [b, a % b]; return a; };
+  function esPrimoPy(n) {
+    if (n < 2) return false;
+    if (n < 4) return true;
+    if (n % 2 === 0) return false;
+    for (let d = 3; d * d <= n; d += 2) if (n % d === 0) return false;
+    return true;
+  }
+  function divisoresPy(n) {
+    const peq = [], gra = [];
+    for (let d = 1; d * d <= n; d++) if (n % d === 0) { peq.push(d); if (d !== n / d) gra.push(n / d); }
+    return peq.concat(gra.reverse());
+  }
+  function factoresPy(n) {
+    const f = [];
+    for (let d = 2; d * d <= n; d += d === 2 ? 1 : 2) while (n % d === 0) { if (f.length && f[f.length - 1][0] === d) f[f.length - 1][1]++; else f.push([d, 1]); n /= d; }
+    if (n > 1) { if (f.length && f[f.length - 1][0] === n) f[f.length - 1][1]++; else f.push([n, 1]); }
+    return f;
+  }
+  const elevado = e => String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+
   const INTER = {
+    grafica: {
+      desc: "La gráfica de una función, con sus ejes. Se ajusta sola, y donde la función no existe (como 1/x en el 0) deja un hueco. Mueve a y b y mira cómo cambia.",
+      p: [{ k: "funcion", t: "sel", v: "a·x² + b", ops: Object.keys(FUNCIONES), label: "función" },
+        { k: "a", t: "rango", v: 1, min: -3, max: 3, paso: 0.5 }, { k: "b", t: "rango", v: -4, min: -5, max: 5, paso: 0.5 },
+        { k: "desde", t: "rango", v: -4, min: -10, max: 10, paso: 0.5 }, { k: "hasta", t: "rango", v: 4, min: -10, max: 10, paso: 0.5 },
+        { k: "ancho", t: "rango", v: 44, min: 12, max: 60 }, { k: "alto", t: "rango", v: 12, min: 4, max: 16 },
+        { k: "color", t: "color", v: "", ninguno: true }, { k: "ejes", t: "check", v: true }],
+      raton: ratonGrafica,
+      vista: (p, s) => {
+        const F = FUNCIONES[p.funcion] || FUNCIONES["a·x² + b"];
+        const expr = F.py(p.a, p.b), f = F.f(p.a, p.b);
+        const codigo = (F.math ? "import math\n\n" : "") + llamada("grafica", [{ crudo: "lambda x: " + expr }, p.desde, p.hasta],
+          [["ancho", p.ancho === 50 ? null : p.ancho], ["alto", p.alto === 15 ? null : p.alto], ["color", p.color || null], ["ejes", p.ejes ? null : { crudo: "False" }]]);
+        let g;
+        try { g = graficaArte([f], p.desde, p.hasta, { ancho: p.ancho, alto: p.alto, color: p.color || null, ejes: p.ejes }); }
+        catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: p.alto, codigo, res: res("lanza", e.tipo) }; }
+        const els = [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }];
+        let r = pista("Pasa el ratón o toca la gráfica para ver cada punto");
+        const c = s.hover == null ? -1 : s.hover - 1 - g.x0;
+        if (c >= 0 && c < g.xs.length) {
+          const y = g.series[0][c], dentro = y !== null && y >= g.bajo - 1e-9 && y <= g.arriba + 1e-9;
+          if (dentro) els.push({ tipo: "punto", x: g.x0 + c + 1, y: g.filaDe(y) + 1, caracter: "●", color: "blanco" });
+          r = res(`x = ${textoCorto(g.xs[c])}  →  y =`, y === null ? "no existe" : textoCorto(y) + (dentro ? "" : " (se sale)"));
+        }
+        return { elementos: els, ancho: p.ancho, alto: p.alto, codigo, res: r };
+      },
+    },
+    grafica_varias: {
+      desc: "Varias funciones a la vez, cada una de su color (cian, amarillo, verde claro...). Marca las que quieras ver.",
+      p: VARIAS.map(([k, , , v]) => ({ k, t: "check", v })).concat([
+        { k: "hasta", t: "rango", v: 6.3, min: 0.5, max: 12.5, paso: 0.1, label: "de -x a x" },
+        { k: "ancho", t: "rango", v: 44, min: 12, max: 60 }, { k: "alto", t: "rango", v: 11, min: 4, max: 16 }]),
+      raton: ratonGrafica,
+      vista: (p, s) => {
+        const usadas = VARIAS.filter(([k]) => p[k]);
+        const codigo = "import math\n\n" + llamada("grafica", [{ crudo: "[" + usadas.map(u => u[1]).join(", ") + "]" }, -p.hasta, p.hasta],
+          [["ancho", p.ancho === 50 ? null : p.ancho], ["alto", p.alto === 15 ? null : p.alto]]);
+        let g;
+        try { g = graficaArte(usadas.map(u => u[2]), -p.hasta, p.hasta, { ancho: p.ancho, alto: p.alto }); }
+        catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: p.alto, codigo, res: res("lanza", e.tipo) }; }
+        const els = [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }];
+        let r = pista("Cada función sale de un color. Pasa el ratón o toca la gráfica");
+        const c = s.hover == null ? -1 : s.hover - 1 - g.x0;
+        if (c >= 0 && c < g.xs.length) {
+          const partes = usadas.map(([k], i) => {
+            const y = g.series[i][c];
+            if (y !== null && y >= g.bajo - 1e-9 && y <= g.arriba + 1e-9) els.push({ tipo: "punto", x: g.x0 + c + 1, y: g.filaDe(y) + 1, caracter: "●", color: "blanco" });
+            return `${k.replace("math.", "")} ${y === null ? "—" : textoCorto(y)}`;
+          });
+          r = res(`x = ${textoCorto(g.xs[c])}  →`, partes.join("   "));
+        }
+        return { elementos: els, ancho: p.ancho, alto: p.alto, codigo, res: r };
+      },
+    },
+    barras: {
+      desc: "Una gráfica de barras con el nombre y el número de cada una. Mueve las notas y mira cómo cambian las barras (van de octavo en octavo).",
+      p: [{ k: "Ana", t: "rango", v: 8.5, min: 0, max: 10, paso: 0.25 }, { k: "Luis", t: "rango", v: 6, min: 0, max: 10, paso: 0.25 },
+        { k: "Marta", t: "rango", v: 9.75, min: 0, max: 10, paso: 0.25 }, { k: "Pablo", t: "rango", v: 4, min: 0, max: 10, paso: 0.25 },
+        { k: "ancho", t: "rango", v: 40, min: 16, max: 60 }, { k: "color", t: "color", v: "verde" },
+        { k: "colores", t: "check", v: true }, { k: "valores", t: "check", v: true }, { k: "maximo=10", t: "check", v: false }],
+      vista: p => {
+        const nombres = ["Ana", "Luis", "Marta", "Pablo"], vals = nombres.map(n => p[n]);
+        const cols = ["cian", "amarillo", "verde", "rojo"];
+        const notas = "notas = {" + nombres.map((n, i) => `${py(n)}: ${py(vals[i])}`).join(", ") + "}";
+        const codigo = notas + "\n" + llamada("barras", [{ crudo: "notas" }], [["ancho", p.ancho === 40 ? null : p.ancho],
+          ["color", p.colores || p.color === "verde" ? null : p.color], ["colores", p.colores ? cols : null],
+          ["valores", p.valores ? null : { crudo: "False" }], ["maximo", p["maximo=10"] ? 10 : null]]);
+        const numeros = vals.map(numeroPy);
+        const anchoNombre = Math.max(...nombres.map(n => n.length)), anchoNumero = p.valores ? Math.max(...numeros.map(n => n.length)) + 1 : 0;
+        const sitio = p.ancho - anchoNombre - 1 - anchoNumero;
+        if (sitio < 3) { const e = errorPy("ValueError", `barras: no caben con ancho=${p.ancho}. Ponle un ancho más grande`); return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: 5, codigo, res: res("lanza", e.tipo) }; }
+        const tope = p["maximo=10"] ? 10 : Math.max(...vals);
+        const lineas = [], colores = [];
+        vals.forEach((v, i) => {
+          const oct = tope <= 0 ? 0 : redondoPy(Math.min(v, tope) / tope * sitio * 8);
+          const barra = "█".repeat(Math.floor(oct / 8)) + (oct % 8 ? " ▏▎▍▌▋▊▉"[oct % 8] : "");
+          const cod = CODIGO_DE[p.colores ? cols[i] : p.color] || " ";
+          let l = nombres[i].padEnd(anchoNombre) + " " + barra, c = " ".repeat(anchoNombre + 1) + cod.repeat(letras(barra).length);
+          if (p.valores) { const resto = " ".repeat(sitio - letras(barra).length + 1) + numeros[i].padStart(anchoNumero - 1); l += resto; c += " ".repeat(sitio - letras(barra).length + 1) + "g".repeat(anchoNumero - 1); }
+          lineas.push(l); colores.push(c);
+        });
+        return { elementos: [{ tipo: "arte", x: 1, y: 1, lineas, colores }], ancho: Math.max(30, p.ancho), alto: 4, codigo,
+          res: res("devuelve", `(${p.ancho}, 4)`) };
+      },
+    },
+    minigrafica: {
+      desc: "Una gráfica pequeñita en una sola línea, para meterla en un print. Escribe tus números o marca «en vivo» para verla moverse.",
+      p: [{ k: "valores", t: "texto", v: "12, 15, 19, 22, 24, 21, 18, 14" }, { k: "en vivo", t: "check", v: false }],
+      alto: 4,
+      anim: (s, p) => {
+        if (!p["en vivo"]) return -300;
+        const paso = v => Math.max(0, Math.min(100, v + Math.floor(Math.random() * 31) - 15));
+        if (!s.serie) { s.serie = [50]; while (s.serie.length < 30) s.serie.push(paso(s.serie[s.serie.length - 1])); }
+        s.serie = s.serie.slice(1).concat(paso(s.serie[s.serie.length - 1]));
+        return 300;
+      },
+      vista: (p, s) => {
+        if (p["en vivo"]) {
+          const serie = s.serie || Array(30).fill(50);
+          return { ancho: 44, alto: 4, elementos: [{ tipo: "texto", x: 2, y: 2, texto: "CPU " + minigraficaPy(serie, 0, 100), color: "verde claro" },
+            { tipo: "texto", x: 37, y: 2, texto: String(serie[serie.length - 1]).padStart(3) + "%", color: "gris" }],
+            codigo: "import random\n\nvalores = [50] * 30\nwhile True:\n    nuevo = valores[-1] + random.randint(-15, 15)\n    valores = valores[1:] + [max(0, min(100, nuevo))]\n" +
+              '    pantalla.escribir("CPU " + pantalla.minigrafica(valores, 0, 100), 2, 2, color="verde claro")\n    pantalla.pausa(0.3)',
+            res: res("cada 0.3 s", `${serie[serie.length - 1]}%`) };
+        }
+        const trozos = String(p.valores || "").split(/[\s,;]+/).filter(Boolean);
+        const malo = trozos.find(t => !/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t));
+        if (malo !== undefined) {
+          const e = errorPy("TypeError", `minigrafica: la lista tiene que ser de números, y hay un '${malo}'`);
+          return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: 5, codigo: `print(pantalla.minigrafica([...]))`, res: res("lanza", e.tipo) };
+        }
+        const nums = trozos.map(Number), texto = minigraficaPy(nums);
+        return { elementos: [{ tipo: "texto", x: 2, y: 2, texto: texto || " " }], ancho: Math.max(30, nums.length + 4), alto: 4,
+          codigo: `print(pantalla.minigrafica([${nums.map(String).join(", ")}]))`, res: res("devuelve", py(texto)) };
+      },
+    },
+    mcd: {
+      desc: "Lo de siempre con números enteros: mcd, mcm, si es primo y sus divisores. mcd y mcm valen con dos números o con más. Mueve a y b.",
+      p: [{ k: "a", t: "rango", v: 12, min: 1, max: 120 }, { k: "b", t: "rango", v: 18, min: 1, max: 120 }],
+      alto: 7,
+      vista: p => {
+        const a = p.a, b = p.b, m = mcdPy(a, b), M = a * b / m;
+        const filas = [[`mcd(${a}, ${b})`, String(m)], [`mcm(${a}, ${b})`, String(M)], [`es_primo(${a})`, py(esPrimoPy(a))], [`es_primo(${b})`, py(esPrimoPy(b))],
+          [`divisores(${a})`, py(divisoresPy(a))], [`divisores(${b})`, py(divisoresPy(b))]];
+        const w = Math.max(...filas.map(f => f[0].length)) + 2;
+        const els = [];
+        filas.forEach(([izq, der], i) => {
+          els.push({ tipo: "texto", x: 1, y: 1 + i, texto: izq, color: "gris claro" }, { tipo: "texto", x: 1 + w, y: 1 + i, texto: "→", color: "gris" },
+            { tipo: "texto", x: 4 + w, y: 1 + i, texto: der, color: der === "True" ? "verde claro" : der === "False" ? "rojo claro" : "amarillo" });
+        });
+        const ancho = Math.max(44, ...filas.map(f => w + 3 + f[1].length));
+        const codigo = filas.map(([izq, der]) => `print(pantalla.${izq})`.padEnd(w + 17) + `# ${der}`).join("\n");
+        return { elementos: els, ancho, alto: 6, codigo, res: m === 1 ? res("mcd = 1:", "son primos entre sí") : pista(`${a} y ${b} se pueden dividir los dos entre ${m}`) };
+      },
+    },
+    descomponer: {
+      desc: "La descomposición en factores primos con la rayita, como en clase. Devuelve lo mismo que factorizar(). Mueve el número.",
+      p: [{ k: "n", t: "rango", v: 360, min: 2, max: 1024 }, { k: "color_primos", t: "color", v: "amarillo" }],
+      alto: 11,
+      vista: p => {
+        const n = p.n, fs = factoresPy(n), div = [];
+        let resto = n;
+        fs.forEach(([q, e]) => { for (let i = 0; i < e; i++) { div.push([resto, q]); resto /= q; } });
+        div.push([1, null]);
+        const an = String(n).length, cp = p.color_primos || null, els = [];
+        div.forEach(([num, q], i) => {
+          els.push({ tipo: "texto", x: 2, y: 1 + i, texto: String(num).padStart(an + 1) + " │" });
+          if (q !== null) els.push({ tipo: "texto", x: an + 6, y: 1 + i, texto: String(q), color: cp, negrita: true });
+        });
+        const pot = fs.map(([q, e]) => String(q) + (e > 1 ? elevado(e) : "")).join(" · ");
+        els.push({ tipo: "texto", x: 2, y: div.length + 1, texto: ` ${n} = ` }, { tipo: "texto", x: an + 6, y: div.length + 1, texto: pot, color: cp, negrita: true });
+        const dic = "{" + fs.map(([q, e]) => `${q}: ${e}`).join(", ") + "}";
+        return { elementos: els, ancho: 40, alto: 11,
+          codigo: llamada("descomponer", [n], [["color_primos", cp === "amarillo" ? null : cp]]) + `\nprint(pantalla.factorizar(${n}))   # ${dic}`,
+          res: fs.length === 1 && fs[0][1] === 1 ? res(`${n} es`, "primo") : res("devuelve", dic) };
+      },
+    },
     escribir: {
       p: [{ k: "texto", t: "texto", v: "Hola, mundo!" }, { k: "x", t: "num", v: 2, min: 1, max: 40 }, { k: "y", t: "num", v: 2, min: 1, max: 5 },
         { k: "color", t: "color", v: "verde" }, { k: "fondo", t: "color", v: "", ninguno: true }, { k: "negrita", t: "check", v: true }, { k: "subrayado", t: "check", v: false }],
@@ -5331,8 +5744,8 @@ const Docs = (() => {
     const ops = typeof d.ops === "function" ? d.ops() : d.ops;
     switch (d.t) {
       case "check": return `<label class="casilla"><input type="checkbox" data-k="${d.k}" ${val ? "checked" : ""}> ${escapar(d.k)}</label>`;
-      case "num": return `<label for="${id}">${etiqueta}<input id="${id}" type="number" data-k="${d.k}" min="${d.min}" max="${d.max}" value="${val}"></label>`;
-      case "rango": return `<label for="${id}">${etiqueta} <output>${val}</output><input id="${id}" type="range" data-k="${d.k}" min="${d.min}" max="${d.max}" step="${d.paso || 1}" value="${val}"></label>`;
+      case "num":
+      case "rango": return `<label for="${id}" class="desliza"><span class="desliza-cab">${etiqueta}<output>${val}</output></span><input id="${id}" type="range" data-k="${d.k}" min="${d.min}" max="${d.max}" step="${d.paso || 1}" value="${val}"></label>`;
       case "car": return `<label for="${id}" class="car-fila">${etiqueta}<input id="${id}" type="text" data-k="${d.k}" maxlength="2" value="${escapar(val)}"></label>`;
       case "area": return `<label for="${id}">${etiqueta}<textarea id="${id}" data-k="${d.k}" rows="4" spellcheck="false">${escapar(val)}</textarea></label>`;
       case "color": case "sel": {
@@ -5355,7 +5768,8 @@ const Docs = (() => {
       inp.addEventListener(inp.type === "checkbox" || inp.tagName === "SELECT" ? "change" : "input", () => {
         let v = inp.type === "checkbox" ? inp.checked : inp.value;
         if (d.t === "num") { v = Math.round(+v); if (!Number.isFinite(v)) return; v = Math.max(d.min, Math.min(d.max, v)); }
-        if (d.t === "rango") { v = +v; const o = inp.parentElement.querySelector("output"); if (o) o.textContent = inp.value; }
+        if (d.t === "rango") v = +v;
+        if (d.t === "num" || d.t === "rango") { const o = inp.parentElement.querySelector("output"); if (o) o.textContent = String(v); }
         st.p[d.k] = v; parar(); repintar();
       });
     });
@@ -5366,7 +5780,11 @@ const Docs = (() => {
         if (x.enfoque && ev.type === "pointerdown") cv.focus({ preventScroll: true });
         const r = x.raton(st.s, ev, c, st.p);
         if (r === "params") {
-          card.querySelectorAll("[data-k]").forEach(inp => { if (inp.type === "number") inp.value = st.p[inp.dataset.k]; });
+          card.querySelectorAll("[data-k]").forEach(inp => {
+            if (inp.type !== "range") return;
+            inp.value = st.p[inp.dataset.k];
+            const o = inp.parentElement.querySelector("output"); if (o) o.textContent = String(st.p[inp.dataset.k]);
+          });
         }
         if (r) repintar();
       };
@@ -5448,19 +5866,177 @@ const Docs = (() => {
       return `<div class="arbol-grupo"><button type="button" class="arbol-cat" data-ir="cat-${c.id}">${escapar(c.label)}</button><ul>` +
         ejs.map(e => rama("doc-" + e.nombre, corto(e.titulo), e.nombre)).join("") + `</ul></div>`;
     }).join("") + `<div class="arbol-grupo"><span class="arbol-cat">Referencia</span><ul>` + REFERENCIA.map(([id, t]) => rama(id, t)).join("") + `</ul></div>`;
-    $("doc-arbol").querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => {
-      const destino = $(b.dataset.ir);
-      if (!destino) return;
-      cerrarIndice();
-      marcar(b.dataset.ir.startsWith("cat-") ? (destino.querySelector(".doc-card")?.id || b.dataset.ir) : b.dataset.ir, true);
-      espia.pausa = performance.now() + 900;
-      destino.scrollIntoView({ behavior: movimientoReducido() ? "auto" : "smooth", block: "start" });
-      if (destino.classList.contains("doc-card")) destino.classList.add("destacada"), setTimeout(() => destino.classList.remove("destacada"), 1200);
-    }));
+    $("doc-arbol").querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => irAFicha(b.dataset.ir)));
+  }
+  function irAFicha(id) {
+    const destino = $(id);
+    if (!destino) return;
+    cerrarIndice();
+    marcar(id.startsWith("cat-") ? (destino.querySelector(".doc-card")?.id || id) : id, true);
+    espia.pausa = performance.now() + 900;
+    destino.scrollIntoView({ behavior: movimientoReducido() ? "auto" : "smooth", block: "start" });
+    if (destino.classList.contains("doc-card")) destino.classList.add("destacada"), setTimeout(() => destino.classList.remove("destacada"), 1200);
+  }
+  // la barra de arriba: al bajar se hace una pastilla con la ficha en la que estás y el botón de subir
+  let rafBarra = 0;
+  function mirarScroll() {
+    rafBarra = 0;
+    if ($("app-docs").hidden) return;
+    $("docs-nav").classList.toggle("pill", window.scrollY > 40);
+  }
+  function prepararBarra() {
+    $("nav-volver").insertAdjacentHTML("afterbegin", ico("arrow-left"));
+    $("nav-subir").innerHTML = ico("arrow-up");
+    $("nav-indice").insertAdjacentHTML("afterbegin", ico("list"));
+    $("nav-volver").addEventListener("click", () => Transicion.volver());
+    const subir = () => window.scrollTo({ top: 0, behavior: movimientoReducido() ? "auto" : "smooth" });
+    $("nav-subir").addEventListener("click", subir);
+    $("nav-marca").addEventListener("click", subir);
+    $("nav-indice").addEventListener("click", () => {
+      const abierto = $("doc-side").classList.toggle("abierto");
+      $("nav-indice").setAttribute("aria-expanded", String(abierto));
+    });
+    document.addEventListener("pointerdown", ev => {
+      if ($("doc-side").classList.contains("abierto") && !ev.target.closest("#doc-side, #nav-indice")) cerrarIndice();
+    });
+    window.addEventListener("scroll", () => { if (!rafBarra) rafBarra = requestAnimationFrame(mirarScroll); }, { passive: true });
+  }
+
+  // buscador: mira el nombre de la función, el título, la explicación y el código del ejemplo
+  const normal = t => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const palabrasDe = t => normal(t).replace(/[^a-z0-9ñ]+/g, " ").trim();
+  // lo que alguien buscaría en inglés
+  const SINONIMOS = {
+    loading: "carga", load: "carga", progress: "progreso", progressbar: "barra progreso", input: "pedir", print: "escribir", clear: "limpiar",
+    sleep: "pausa", wait: "esperar", box: "caja", button: "boton", mouse: "raton", click: "clic", key: "tecla", keyboard: "tecla",
+    table: "tabla", chart: "grafica", plot: "grafica", graph: "grafica", font: "fuente", game: "jugar", matrix: "matriz",
+    fraction: "fraccion", prime: "primo", gcd: "mcd", lcm: "mcm", title: "titulo", big: "grande", line: "linea", select: "elegir",
+    choose: "elegir", form: "formulario", spin: "spinner", draw: "dibujar", text: "texto", write: "escribir", colour: "color",
+  };
+  let INDICE = null;
+  function indiceBusqueda() {
+    if (INDICE) return INDICE;
+    const catDe = Object.fromEntries(CATS.map(c => [c.id, c.label]));
+    INDICE = EJEMPLOS.filter(e => catDe[e.cat]).map(e => {
+      let codigo = e.codigo || "";
+      try { codigo = calcular(e).codigo || codigo; } catch (err) {}
+      const funciones = [...String(e.titulo).matchAll(/([a-zñ_]+)\(/gi)].map(m => m[1]);
+      return { id: "doc-" + e.nombre, titulo: corto(e.titulo), cat: catDe[e.cat], desc: e.desc,
+        nombres: palabrasDe(e.nombre + " " + funciones.join(" ")).split(" "), t: palabrasDe(e.titulo), d: palabrasDe(e.desc + " " + catDe[e.cat]), c: palabrasDe(codigo) };
+    }).concat(REFERENCIA.map(([id, t]) => ({ id, titulo: t, cat: "Referencia", desc: "", nombres: palabrasDe(t).split(" "), t: palabrasDe(t), d: "", c: "" })));
+    return INDICE;
+  }
+  const terminos = q => palabrasDe(q).split(" ").filter(Boolean).flatMap(t => (SINONIMOS[t] || t).split(" "));
+  function buscar(q) {
+    const ts = terminos(q);
+    if (!ts.length) return [];
+    const juntos = "doc-" + ts.join("_");
+    return indiceBusqueda().map((it, orden) => {
+      let total = 0;
+      for (const t of ts) {
+        let p = 0;
+        if (it.nombres.includes(t)) p = 14;
+        else if (it.nombres.some(n => n.startsWith(t))) p = 10;
+        else if (it.t.includes(t)) p = 6;
+        else if (it.d.includes(t)) p = 3;
+        else if (it.c.includes(t)) p = 1;
+        if (!p) return null;
+        total += p;
+      }
+      // "pantalla de carga" tiene que dar pantalla_de_carga lo primero
+      if (it.id === juntos) total += 30;
+      return { ...it, total, orden };
+    }).filter(Boolean).sort((a, b) => b.total - a.total || a.orden - b.orden);
+  }
+  function resaltar(texto, ts) {
+    const cs = Array.from(texto), plano = cs.map(c => normal(c).charAt(0) || c).join("");
+    const marca = new Array(cs.length).fill(false);
+    ts.forEach(t => { if (t.length < 2) return; const i = plano.indexOf(t); if (i >= 0) for (let k = i; k < i + t.length && k < marca.length; k++) marca[k] = true; });
+    let out = "", dentro = false;
+    cs.forEach((c, i) => {
+      if (marca[i] !== dentro) { out += dentro ? "</mark>" : "<mark>"; dentro = marca[i]; }
+      out += escapar(c);
+    });
+    return out + (dentro ? "</mark>" : "");
+  }
+  let resultados = [], elegido = 0;
+  function cerrarBusqueda() {
+    $("buscar-lista").hidden = true;
+    $("buscar").setAttribute("aria-expanded", "false");
+    $("buscar").removeAttribute("aria-activedescendant");
+  }
+  function pintarElegido() {
+    $("buscar-lista").querySelectorAll("li[data-i]").forEach(li => {
+      const si = +li.dataset.i === elegido;
+      li.setAttribute("aria-selected", String(si));
+      if (si) { $("buscar").setAttribute("aria-activedescendant", li.id); li.scrollIntoView({ block: "nearest" }); }
+    });
+  }
+  function pintarResultados() {
+    const q = $("buscar").value, lista = $("buscar-lista");
+    if (!q.trim()) { cerrarBusqueda(); return; }
+    const ts = terminos(q);
+    resultados = buscar(q).slice(0, 8);
+    elegido = 0;
+    lista.innerHTML = resultados.length
+      ? resultados.map((r, i) => `<li role="option" id="busca-${i}" data-i="${i}" aria-selected="false"><b>${resaltar(r.titulo, ts)}</b><span class="cat">${escapar(r.cat)}</span>${r.desc ? `<small>${resaltar(r.desc, ts)}</small>` : ""}</li>`).join("")
+      : `<li class="nada" role="option" aria-disabled="true">Nada con «${escapar(q.trim())}». Prueba con otra palabra: barra, menú, tecla…</li>`;
+    lista.hidden = false;
+    $("buscar").setAttribute("aria-expanded", "true");
+    pintarElegido();
+  }
+  function irAResultado(r) {
+    if (!r) return;
+    $("buscar").value = "";
+    cerrarBusqueda();
+    $("buscar").blur();
+    irAFicha(r.id);
+  }
+  function prepararBuscador() {
+    const inp = $("buscar"), lista = $("buscar-lista");
+    inp.addEventListener("input", pintarResultados);
+    inp.addEventListener("focus", () => { if (inp.value.trim()) pintarResultados(); });
+    inp.addEventListener("blur", () => setTimeout(cerrarBusqueda, 120));
+    inp.addEventListener("keydown", ev => {
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        if (lista.hidden) { pintarResultados(); return; }
+        if (!resultados.length) return;
+        elegido = (elegido + (ev.key === "ArrowDown" ? 1 : resultados.length - 1)) % resultados.length;
+        pintarElegido();
+      } else if (ev.key === "Enter") {
+        ev.preventDefault();
+        irAResultado(resultados[elegido]);
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        if (inp.value) { inp.value = ""; cerrarBusqueda(); } else inp.blur();
+      }
+    });
+    // con pointerdown el input no pierde el foco antes de tiempo
+    lista.addEventListener("pointerdown", ev => {
+      const li = ev.target.closest("li[data-i]");
+      if (!li) return;
+      ev.preventDefault();
+      irAResultado(resultados[+li.dataset.i]);
+    });
+    lista.addEventListener("pointermove", ev => {
+      const li = ev.target.closest("li[data-i]");
+      if (li && +li.dataset.i !== elegido) { elegido = +li.dataset.i; pintarElegido(); }
+    });
+    document.addEventListener("keydown", ev => {
+      if ($("app-docs").hidden || ev.defaultPrevented || ev.target === inp) return;
+      const escribiendo = ev.target.closest && ev.target.closest("input, textarea, select, [contenteditable]");
+      const barra = ev.key === "/" && !escribiendo && !ev.ctrlKey && !ev.metaKey && !ev.altKey;
+      const ctrlK = (ev.ctrlKey || ev.metaKey) && !ev.altKey && ev.key.toLowerCase() === "k";
+      if (!barra && !ctrlK) return;
+      ev.preventDefault();
+      inp.focus();
+      inp.select();
+    });
   }
   function cerrarIndice() {
     $("doc-side").classList.remove("abierto");
-    $("doc-side-btn").setAttribute("aria-expanded", "false");
+    $("nav-indice").setAttribute("aria-expanded", "false");
   }
   function marcar(id, forzar) {
     if (!forzar && espia && performance.now() < espia.pausa) return;
@@ -5474,7 +6050,8 @@ const Docs = (() => {
     });
     arbol.querySelectorAll(".arbol-grupo").forEach(g => g.classList.toggle("activo", !!g.querySelector("li.activo")));
     if (!actual) return;
-    $("doc-side-actual").textContent = actual.textContent;
+    $("nav-actual").textContent = actual.textContent;
+    $("nav-indice-txt").textContent = actual.textContent;
     const a = actual.getBoundingClientRect(), r = arbol.getBoundingClientRect();
     if (arbol.scrollHeight > arbol.clientHeight && (a.top < r.top + 30 || a.bottom > r.bottom - 30)) arbol.scrollTop += a.top - r.top - r.height / 2;
   }
@@ -5485,7 +6062,7 @@ const Docs = (() => {
     const dentro = new Set();
     const obs = new IntersectionObserver(es => {
       es.forEach(e => e.isIntersecting ? dentro.add(e.target) : dentro.delete(e.target));
-      const orden = [...document.querySelectorAll("#docs-grid .doc-card, #docs .doc-seccion")];
+      const orden = [...document.querySelectorAll("#docs-grid .doc-card, #docs-ref .doc-seccion")];
       const primero = orden.find(el => dentro.has(el));
       if (primero) marcar(primero.id);
     }, { rootMargin: "-25% 0px -65% 0px" });
@@ -5500,7 +6077,7 @@ const Docs = (() => {
     }).join("");
     EJEMPLOS.forEach(ej => { if (CATS.some(c => c.id === ej.cat)) { pintarEjemplo(ej); conectar(ej); } });
     pintarArbol();
-    document.querySelectorAll("#docs-grid .doc-card, #docs .doc-seccion").forEach(el => espia.obs.observe(el));
+    document.querySelectorAll("#docs-grid .doc-card, #docs-ref .doc-seccion").forEach(el => espia.obs.observe(el));
   }
   function pintarColores() {
     $("doc-colores").innerHTML = COLORES.map(([n, hex, c]) =>
@@ -5548,12 +6125,9 @@ const Docs = (() => {
       $("fuentes-texto").addEventListener("input", () => { clearTimeout(t); t = setTimeout(pintarFuentes, 120); });
       $("fuentes-color").addEventListener("change", pintarFuentes);
       TERM.fuentesListas(() => { if (!$("app-docs").hidden) { pintarDocs(); pintarColores(); pintarFuentes(); } });
-      $("doc-side-btn").querySelector(".doc-side-ico").innerHTML = ico("list");
-      $("doc-side-btn").addEventListener("click", () => {
-        const abierto = $("doc-side").classList.toggle("abierto");
-        $("doc-side-btn").setAttribute("aria-expanded", String(abierto));
-      });
-      document.addEventListener("keydown", ev => { if (ev.key === "Escape" && $("doc-side").classList.contains("abierto")) { cerrarIndice(); $("doc-side-btn").focus(); } });
+      prepararBarra();
+      prepararBuscador();
+      document.addEventListener("keydown", ev => { if (ev.key === "Escape" && $("doc-side").classList.contains("abierto")) { cerrarIndice(); $("nav-indice").focus(); } });
       let tr = null, anchoAntes = window.innerWidth;
       window.addEventListener("resize", () => {
         clearTimeout(tr);
@@ -5565,6 +6139,8 @@ const Docs = (() => {
       });
     }
     pintarDocs(); pintarColores(); pintarFuentes();
+    INDICE = null;
+    mirarScroll();
   }
   return { arrancar };
 })();

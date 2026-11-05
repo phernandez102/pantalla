@@ -14,6 +14,7 @@
 - En `pantalla.ayuda()` las barras, las cargas y los spinners tienen su propio apartado.
 - La demo (`python -m pantalla`) tiene apartados de fracciones, gráficas y pantallas de carga, y la de matrices hace más cosas.
 - En el constructor web las barras tienen estilo y color final.
+- En la documentación web hay un buscador (`/` o Ctrl+K) y una barra que al bajar se queda como pastilla, con un botón para volver arriba. Las gráficas, `barras()`, `minigrafica()`, `mcd()` y `descomponer()` tienen deslizadores y se dibujan en directo.
 - Ejemplos nuevos: 13 a 17.
 
 ## 0.3.1
