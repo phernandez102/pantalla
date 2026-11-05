@@ -35,6 +35,10 @@ from .matrices import (clasificar_sistema, determinante, escalonar, identidad, i
 from .numeros import (Fraccion, calcular, descomponer, divisores, es_primo, escribir_cuenta, factorizar,
                       fraccion, mcd, mcm, pedir_fraccion)
 from .spinners import Spinner, lista_spinners, spinner
+from .vectores import (Vector, angulo, dibujar_vectores, distancia, modulo, multiplicar_vector, pedir_vector,
+                       producto_escalar, producto_mixto, producto_vectorial, proyeccion, restar_vectores,
+                       son_independientes, son_paralelos, son_perpendiculares, sumar_vectores, unitario,
+                       vector, vector_entre)
 from .teclado import (confirmar, esperar, pedir, pedir_contrasena, pedir_numero, tecla,
                       tecla_pulsada, vaciar_teclado)
 from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, ir_a, limpiar,
@@ -42,7 +46,7 @@ from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, i
                        terminar, titulo_ventana, volver_a_posicion)
 from .texto import centrar, escribir, escribir_derecha, escribir_lento
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from .terminal import _abrir_en_consola_si_idle as _abrir
 
@@ -68,6 +72,10 @@ _GRUPOS = [
     ("Matrices", ["matriz", "pedir_matriz", "sumar_matrices", "restar_matrices", "multiplicar_matrices",
                   "transpuesta", "identidad", "traza", "determinante", "inversa", "rango",
                   "potencia_matriz", "escalonar", "resolver_sistema", "clasificar_sistema"]),
+    ("Vectores", ["vector", "Vector", "pedir_vector", "vector_entre", "sumar_vectores", "restar_vectores",
+                  "multiplicar_vector", "producto_escalar", "producto_vectorial", "producto_mixto", "modulo",
+                  "unitario", "distancia", "angulo", "proyeccion", "son_paralelos", "son_perpendiculares",
+                  "son_independientes", "dibujar_vectores"]),
     ("Fracciones y números", ["fraccion", "pedir_fraccion", "calcular", "escribir_cuenta", "mcd", "mcm",
                               "es_primo", "divisores", "factorizar", "descomponer"]),
     ("Gráficas", ["grafica", "barras", "minigrafica"]),
@@ -105,6 +113,13 @@ _PARECIDAS = {
     "loading": "pantalla_de_carga", "pantalla_carga": "pantalla_de_carga", "carga": "pantalla_de_carga",
     "loading_screen": "pantalla_de_carga", "cargar": "pantalla_de_carga", "estilos_barra": "lista_barras",
     "barras_progreso": "lista_barras", "progress": "barra_progreso", "progressbar": "barra_progreso",
+    "vectores": "vector", "norma": "modulo", "magnitud": "modulo", "longitud": "modulo", "modulo_vector": "modulo",
+    "producto_punto": "producto_escalar", "producto_interno": "producto_escalar", "dot": "producto_escalar",
+    "producto_cruz": "producto_vectorial", "cross": "producto_vectorial", "producto_exterior": "producto_vectorial",
+    "angulo_vectores": "angulo", "sumar_vector": "sumar_vectores", "restar_vector": "restar_vectores",
+    "vector_unitario": "unitario", "normalizar": "unitario", "dibujar_vector": "dibujar_vectores",
+    "flechas": "dibujar_vectores", "independientes": "son_independientes", "perpendiculares": "son_perpendiculares",
+    "paralelos": "son_paralelos", "ortogonales": "son_perpendiculares",
 }
 
 

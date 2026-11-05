@@ -19,7 +19,7 @@
 
 <br>
 
-**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, barras, spinners y pantallas de carga para las tareas largas, y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
+**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, barras, spinners y pantallas de carga para las tareas largas, y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, vectores, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
 
 <table>
 <tr>
@@ -102,7 +102,7 @@ La pantalla es una cuadrícula de letras. `x` es la columna (hacia la derecha) e
 
 ## Todo lo que hay
 
-[Pantalla y cursor](https://github.com/phernandez102/pantalla#pantalla-y-cursor) · [Escribir](https://github.com/phernandez102/pantalla#escribir) · [Colores](https://github.com/phernandez102/pantalla#colores) · [Dibujar](https://github.com/phernandez102/pantalla#dibujar) · [Teclado](https://github.com/phernandez102/pantalla#teclado) · [Cosas ya hechas](https://github.com/phernandez102/pantalla#cosas-ya-hechas) · [Barras y pantallas de carga](https://github.com/phernandez102/pantalla#barras-y-pantallas-de-carga) · [Ratón](https://github.com/phernandez102/pantalla#ratón) · [Matrices](https://github.com/phernandez102/pantalla#matrices) · [Fracciones y números](https://github.com/phernandez102/pantalla#fracciones-y-números) · [Gráficas](https://github.com/phernandez102/pantalla#gráficas)
+[Pantalla y cursor](https://github.com/phernandez102/pantalla#pantalla-y-cursor) · [Escribir](https://github.com/phernandez102/pantalla#escribir) · [Colores](https://github.com/phernandez102/pantalla#colores) · [Dibujar](https://github.com/phernandez102/pantalla#dibujar) · [Teclado](https://github.com/phernandez102/pantalla#teclado) · [Cosas ya hechas](https://github.com/phernandez102/pantalla#cosas-ya-hechas) · [Barras y pantallas de carga](https://github.com/phernandez102/pantalla#barras-y-pantallas-de-carga) · [Ratón](https://github.com/phernandez102/pantalla#ratón) · [Matrices](https://github.com/phernandez102/pantalla#matrices) · [Vectores](https://github.com/phernandez102/pantalla#vectores) · [Fracciones y números](https://github.com/phernandez102/pantalla#fracciones-y-números) · [Gráficas](https://github.com/phernandez102/pantalla#gráficas)
 
 `pantalla.ayuda()` abre un menú con todas, y si escribes mal un nombre el error te dice cuál querías.
 
@@ -484,6 +484,54 @@ pantalla.matriz([[2, 1, 5], [1, -1, 1]], ampliada=True)           # con la raya 
 
 `resolver_sistema()` devuelve la lista con las soluciones, o `None` si el sistema no tiene una sola solución (con `pasos=True` te dice si es porque no tiene ninguna o porque tiene infinitas). En vez de `b` le puedes dar directamente la matriz ampliada.
 
+### Vectores
+
+<p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/vectores.svg" alt="Dos vectores y su suma dibujados con flechas, con el producto escalar, el módulo y el ángulo" width="720"></p>
+
+```python
+u = pantalla.Vector(3, 2)
+v = pantalla.Vector(-1, 3)
+
+print(u + v)          # (2, 5)
+print(2 * u - v)      # (7, 1)
+print(u / 2)          # (3/2, 1)
+print(abs(u))         # el módulo: 3.605551275464
+
+pantalla.dibujar_vectores({"u": u, "v": v, "u+v": u + v})      # con flechas, cada uno de un color
+pantalla.dibujar_vectores({"u": u, "v": ((3, 2), (2, 5))})      # v empieza en la punta de u
+u = pantalla.pedir_vector("u", dimension=3)                     # como pedir_matriz, pero en una fila
+```
+
+Un `Vector` es una tupla, así que vale para todo lo que acepta una tupla (`x, y = u`, `u[0]`, `len(u)`). Las funciones también aceptan tuplas y listas normales, y las cuentas van con fracciones exactas como las matrices. Para meterlo en un texto usa un f-string: `f"u = {u}"`.
+
+```python
+pantalla.producto_escalar((1, 2, 3), (4, -5, 6))     # 12
+pantalla.producto_vectorial((1, 2, 3), (4, 5, 6))    # (-3, 6, -3), solo en 3D
+pantalla.producto_mixto((1, 0, 0), (0, 1, 0), (0, 0, 1))   # 1, el determinante de los tres
+pantalla.modulo((3, 4))                              # 5 (si la raíz no es exacta, un decimal)
+pantalla.unitario((3, 4))                            # (3/5, 4/5)
+pantalla.angulo((1, 0), (1, 1))                      # 45.0, en grados (radianes=True si los quieres así)
+pantalla.distancia((1, 1), (4, 5))                   # 5
+pantalla.vector_entre((1, 2), (4, 6))                # el vector AB: (3, 4)
+pantalla.proyeccion((2, 3), (1, 0))                  # (2, 0)
+
+pantalla.son_perpendiculares((1, 2), (-2, 1))        # True
+pantalla.son_paralelos((1, 2), (3, 6))               # True
+pantalla.son_independientes((1, 0, 0), (0, 1, 0), (1, 1, 0))   # False
+```
+
+Con `pasos=True` escriben la cuenta entera, como se haría en el cuaderno:
+
+```text
+u · v = 1·4 + 2·(-5) + 3·6 = 4 - 10 + 18 = 12
+|u| = √(2² + 2²) = √8 = 2√2 ≈ 2.8284
+cos α = u · v / (|u|·|v|) = 5 / (√5·√10) ≈ 0.7071
+α ≈ 45°
+        │ i  j  k │
+u × v = │ 1  2  3 │ = (2·6 - 3·5, 3·4 - 1·6, 1·5 - 2·4) = (-3, 6, -3)
+        │ 4  5  6 │
+```
+
 ### Fracciones y números
 
 <p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/mates.svg" alt="Cuentas con fracciones, una matriz con su inversa y la descomposición de 360" width="640"></p>
@@ -642,6 +690,7 @@ En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil a
 15. `15_graficas.py`: dibujar funciones y gráficas de barras
 16. `16_formulario.py`: un formulario y una lista para marcar varias cosas
 17. `17_pantalla_de_carga.py`: una pantalla de carga que prepara un mapa de verdad antes de enseñarlo
+18. `18_vectores.py`: pedir dos vectores, dibujarlos con flechas y sacar el ángulo entre ellos
 
 ## Si algo falla
 

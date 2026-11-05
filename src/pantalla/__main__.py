@@ -226,6 +226,32 @@ def demo_graficas():
     pantalla.tecla()
 
 
+def demo_vectores():
+    pantalla.limpiar()
+    pantalla.cabecera("Vectores")
+    u, v = pantalla.Vector(3, 2), pantalla.Vector(-1, 3)
+    ancho, _ = pantalla.dibujar_vectores({"u": u, "v": v, "u+v": u + v}, 2, 3, ancho=36, alto=17)
+    x = ancho + 5
+    filas = [
+        ("u = %s    v = %s" % (u, v), "cian"),
+        ("u + v = %s    2u - v = %s" % (u + v, 2 * u - v), None),
+        ("u · v = %s" % pantalla.producto_escalar(u, v), None),
+        ("|u| = %s" % round(pantalla.modulo(u), 4), None),
+        ("ángulo entre u y v = %s°" % round(pantalla.angulo(u, v), 2), None),
+        (f"unitario((3, 4)) = {pantalla.unitario((3, 4))}", None),
+        ("", None),
+        ("En 3D:", "gris"),
+        (f"(1, 2, 3) × (4, 5, 6) = {pantalla.producto_vectorial((1, 2, 3), (4, 5, 6))}", "amarillo"),
+        ("son_perpendiculares((1, 2), (-2, 1)) = %s" % pantalla.son_perpendiculares((1, 2), (-2, 1)), "verde"),
+        ("son_independientes((1, 2, 3), (2, 4, 6)) = %s" % pantalla.son_independientes((1, 2, 3), (2, 4, 6)),
+         "rojo claro"),
+    ]
+    for i, (texto, color) in enumerate(filas):
+        pantalla.escribir(texto, x, 4 + i, color=color)
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
 def demo_cargas():
     pantalla.limpiar()
     pantalla.cabecera("Barras y pantallas de carga")
@@ -263,7 +289,7 @@ def main():
     secciones = {
         "Lo básico": ["Colores", "Cajas y dibujos", "Fuentes ASCII", "Teclado"],
         "Cosas ya hechas": ["Menús", "Tablas, barras y mensajes", "Pantallas de carga", "Pedir datos"],
-        "Más": ["Matrices", "Fracciones", "Gráficas", "Mover una @", "Ver posiciones", "Salir"],
+        "Más": ["Matrices", "Vectores", "Fracciones", "Gráficas", "Mover una @", "Ver posiciones", "Salir"],
     }
     ayudas = {
         "Colores": "Todos los colores y estilos de texto",
@@ -275,6 +301,7 @@ def main():
         "Pantallas de carga": "Los estilos de barra_progreso() y pantalla_de_carga()",
         "Pedir datos": "pedir, pedir_numero y confirmar",
         "Matrices": "pedir_matriz(), matriz(), determinante() e inversa()",
+        "Vectores": "dibujar_vectores(), producto escalar y vectorial, módulo y ángulo",
         "Fracciones": "escribir_cuenta(), descomponer(), mcd, mcm y primos",
         "Gráficas": "grafica(), barras() y minigrafica()",
         "Mover una @": "Un juego mínimo con las flechas",
@@ -284,7 +311,7 @@ def main():
     iconos = {
         "Colores": "■", "Cajas y dibujos": "┌┐", "Fuentes ASCII": "A", "Teclado": "Aa", "Menús": "≡",
         "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Pantallas de carga": "▰▱", "Matrices": "[ ]",
-        "Fracciones": "½", "Gráficas": "~",
+        "Vectores": "↗", "Fracciones": "½", "Gráficas": "~",
         "Mover una @": "@", "Ver posiciones": "╋", "Salir": "←",
     }
     pantalla.iniciar(titulo="pantalla · demo")
@@ -313,6 +340,8 @@ def main():
                 demo_pedir()
             elif elegida == "Matrices":
                 demo_matrices()
+            elif elegida == "Vectores":
+                demo_vectores()
             elif elegida == "Fracciones":
                 demo_fracciones()
             elif elegida == "Gráficas":

@@ -1,5 +1,15 @@
 # Cambios
 
+## 0.5.0
+
+- Vectores: `Vector` (una tupla que suma, resta y se multiplica por un número con `+`, `-`, `*` y `/`), `vector()` para escribirlo y `pedir_vector()` para pedirlo con las flechas.
+- Cuentas: `sumar_vectores()`, `restar_vectores()`, `multiplicar_vector()`, `vector_entre()`, `producto_escalar()`, `producto_vectorial()`, `producto_mixto()`, `modulo()`, `unitario()`, `distancia()`, `angulo()` y `proyeccion()`. Con fracciones exactas, y el módulo sale exacto cuando la raíz lo es.
+- `producto_escalar()`, `modulo()`, `angulo()` y `producto_vectorial()` con `pasos=True` escriben la cuenta entera (`|u| = √8 = 2√2 ≈ 2.8284`).
+- `son_paralelos()`, `son_perpendiculares()` y `son_independientes()`.
+- `dibujar_vectores()` los pinta con flechas en unos ejes, desde el origen o de un punto a otro.
+- La demo tiene un apartado de vectores, y en la documentación web se pueden mover con deslizadores.
+- Ejemplo nuevo: 18.
+
 ## 0.4.0
 
 - Matrices: `sumar_matrices()`, `restar_matrices()`, `multiplicar_matrices()`, `transpuesta()`, `identidad()`, `traza()`, `determinante()`, `inversa()`, `rango()` y `potencia_matriz()`. Todo con fracciones exactas.

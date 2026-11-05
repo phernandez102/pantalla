@@ -785,7 +785,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 <header class="cabeza">
   <div class="marca">
     <h1>pantalla<span>.</span>constructor</h1>
-    <small>para la librería <code>pantalla</code> 0.4</small>
+    <small>para la librería <code>pantalla</code> 0.5</small>
   </div>
   <ol class="pasos" aria-label="Cómo se usa">
     <li><b>1</b> Dibuja en la terminal</li>
@@ -4967,6 +4967,127 @@ const Docs = (() => {
     return f;
   }
   const elevado = e => String(e).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  // vectores: las mismas cuentas que vectores.py (con los deslizadores solo salen enteros)
+  const FLECHAS_V = ["→", "↗", "↑", "↖", "←", "↙", "↓", "↘"];
+  const modPy = (a, b) => ((a % b) + b) % b;
+  function limitesV(valores) {
+    const bajo = Math.min(...valores), alto = Math.max(...valores), largo = Math.max(alto - bajo, 1);
+    let paso = 1;
+    while (largo / paso > 10) paso *= [2, 5, 10].find(k => largo / (paso * k) <= 10) || 10;
+    return [modPy(bajo, paso) === 0 ? Math.floor(bajo / paso) * paso - paso : Math.floor(bajo / paso) * paso,
+      modPy(alto, paso) === 0 ? Math.ceil(alto / paso) * paso + paso : Math.ceil(alto / paso) * paso];
+  }
+  // flechas: [nombre, desde, hasta, color]
+  function vectoresArte(flechas, ancho = 41, alto = 17, cuadricula = true) {
+    if (ancho < 12 || alto < 6) throw errorPy("ValueError", "dibujar_vectores: es muy pequeño. Ponle por lo menos ancho=12 y alto=6");
+    const xs = [0], ys = [0];
+    flechas.forEach(([, a, b]) => { xs.push(a[0], b[0]); ys.push(a[1], b[1]); });
+    const [x0, x1] = limitesV(xs), [y0, y1] = limitesV(ys);
+    const anchoNum = Math.max(String(y0).length, String(y1).length, 1);
+    const sitioX = ancho - anchoNum - 1, sitioY = alto - 1;
+    const escala = Math.min((sitioX - 1) / (2 * (x1 - x0)), (sitioY - 1) / (y1 - y0));
+    const cols = redondoPy((x1 - x0) * 2 * escala) + 1, filas = redondoPy((y1 - y0) * escala) + 1;
+    const celda = (px, py) => [(px - x0) * 2 * escala, (y1 - py) * escala];
+    const celdas = Array.from({ length: filas }, () => Array.from({ length: cols }, () => [" ", null]));
+    const [cx0, cy0] = celda(0, 0).map(redondoPy);
+    if (cuadricula && escala >= 1)
+      for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) { const [c, f] = celda(gx, gy).map(redondoPy); celdas[f][c] = ["·", "gris"]; }
+    for (let c = 0; c < cols; c++) celdas[cy0][c] = ["─", "gris"];
+    for (let f = 0; f < filas; f++) celdas[f][cx0] = [f === cy0 ? "┼" : "│", "gris"];
+    const puntas = [];
+    flechas.forEach(([nombre, desde, hasta, color]) => {
+      const [ax, ay] = celda(...desde), [bx, by] = celda(...hasta);
+      const [ca, fa, cb, fb] = [ax, ay, bx, by].map(redondoPy);
+      const pasos = Math.max(1, Math.abs(cb - ca), Math.abs(fb - fa)), camino = [];
+      for (let k = 0; k <= pasos; k++) {
+        const p = [ca + redondoPy((cb - ca) * k / pasos), fa + redondoPy((fb - fa) * k / pasos)], u = camino[camino.length - 1];
+        if (!u || u[0] !== p[0] || u[1] !== p[1]) camino.push(p);
+      }
+      for (let i = 0; i + 1 < camino.length; i++) {
+        const [c, f] = camino[i], [c2, f2] = camino[i + 1];
+        if (i === 0 && (c === cx0 || f === cy0)) continue;
+        const dc = c2 - c, df = f2 - f;
+        celdas[f][c] = [df === 0 ? "─" : dc === 0 ? "│" : dc * df < 0 ? "╱" : "╲", color];
+      }
+      const ang = Math.atan2(-(by - ay) * 2, bx - ax) * (180 / Math.PI);
+      const punta = bx === ax && by === ay ? "•" : FLECHAS_V[modPy(redondoPy(ang / 45), 8)];
+      puntas.push([camino[camino.length - 1], punta, color, nombre, bx - ax]);
+    });
+    puntas.forEach(([[c, f], punta, color]) => { celdas[f][c] = [punta, color]; });
+    puntas.forEach(([[c, f], , color, nombre, dx]) => {
+      const n = nombre.length;
+      let sitios = [[c + 1, f], [c - n, f], [c + 1, f - 1], [c - n, f - 1], [c + 1, f + 1], [c - n, f + 1]];
+      if (dx < 0) sitios = [sitios[1], sitios[0], sitios[3], sitios[2], sitios[5], sitios[4]];
+      const sitio = sitios.find(([sc, sf]) => sf >= 0 && sf < filas && sc >= 0 && sc + n <= cols &&
+        celdas[sf].slice(sc, sc + n).every(([ch]) => " ·─│".includes(ch)));
+      if (sitio) [...nombre].forEach((l, k) => { celdas[sitio[1]][sitio[0] + k] = [l, color]; });
+    });
+    const lineas = [], colores = [];
+    for (let f = 0; f < filas; f++) {
+      const numero = f === 0 ? String(y1) : f === filas - 1 ? String(y0) : f === cy0 ? "0" : "";
+      let l = numero.padStart(anchoNum) + " ", c = "g".repeat(anchoNum + 1);
+      celdas[f].forEach(([ch, n]) => { l += ch; c += n ? CODIGO_DE[n] : " "; });
+      l = l.replace(/ +$/, "");
+      lineas.push(l); colores.push(c.slice(0, letras(l).length));
+    }
+    const izq = String(x0), der = String(x1);
+    let abajo = " ".repeat(anchoNum + 1) + izq;
+    const pos = anchoNum + 1 + cx0;
+    if (pos > abajo.length + 1 && pos < anchoNum + 1 + cols - der.length - 1) abajo += " ".repeat(pos - abajo.length) + "0";
+    abajo += der.padStart(anchoNum + 1 + cols - abajo.length);
+    lineas.push(abajo); colores.push("g".repeat(abajo.length));
+    return { lineas, colores, ancho: anchoNum + 1 + cols, alto: filas + 1 };
+  }
+  const pV = n => n < 0 ? `(${n})` : String(n);
+  const textoV = v => "(" + v.join(", ") + ")";
+  const tuplaPy = v => "(" + v.map(py).join(", ") + ")";
+  const sinCeros = t => t.replace(/0+$/, "").replace(/\.$/, "");
+  // como el repr de python para lo que devuelve _bonito (round a 12 cifras)
+  const floatPy = x => { const r = Number(x.toFixed(12)); return Number.isInteger(r) ? r.toFixed(1) : String(r); };
+  const isqrt = n => { let r = Math.floor(Math.sqrt(n)); while (r * r > n) r--; while ((r + 1) * (r + 1) <= n) r++; return r; };
+  const raizExacta = s => { const r = isqrt(s); return r * r === s ? r : null; };
+  function textoRaiz(s) {
+    if (s <= 0) return null;
+    let fuera = 1, dentro = s;
+    for (let k = 2; k * k <= dentro; k++) while (dentro % (k * k) === 0) { fuera *= k; dentro /= k * k; }
+    return fuera === 1 || dentro === 1 ? null : `${fuera}√${dentro}`;
+  }
+  function fraccionTxt(n, d) {
+    if (d < 0) { n = -n; d = -d; }
+    const m = mcdPy(Math.abs(n), d) || 1;
+    return d / m === 1 ? String(n / m) : `${n / m}/${d / m}`;
+  }
+  const escalarV = (u, v) => u.reduce((s, a, i) => s + a * v[i], 0);
+  function cuentaEscalar(u, v) {
+    const prods = u.map((a, i) => a * v[i]), total = prods.reduce((s, n) => s + n, 0);
+    const partes = ["u · v = " + u.map((a, i) => pV(a) + "·" + pV(v[i])).join(" + ")];
+    if (prods.length > 1) partes.push(prods.map((n, i) => i === 0 ? String(n) : n < 0 ? " - " + -n : " + " + n).join(""));
+    partes.push(String(total));
+    return partes.join(" = ");
+  }
+  function cuentaModulo(u, nombre = "u") {
+    const s = escalarV(u, u), r = raizExacta(s);
+    const partes = [`|${nombre}| = √(${u.map(n => pV(n) + "²").join(" + ")})`, "√" + s];
+    if (r !== null) partes.push(String(r));
+    else { const t = textoRaiz(s); if (t) partes.push(t); partes[partes.length - 1] += " ≈ " + sinCeros(Math.sqrt(s).toFixed(4)); }
+    return partes.join(" = ");
+  }
+  function cuentaAngulo(u, v) {
+    const pe = escalarV(u, v), su = escalarV(u, u), sv = escalarV(v, v);
+    const cos = Math.max(-1, Math.min(1, pe / Math.sqrt(su * sv))), a = Math.acos(cos), grados = a * (180 / Math.PI);
+    const tm = s => { const r = raizExacta(s); return r !== null ? String(r) : textoRaiz(s) || "√" + s; };
+    return { grados, lineas: [`cos α = u · v / (|u|·|v|) = ${pe} / (${tm(su)}·${tm(sv)}) ≈ ${sinCeros(cos.toFixed(4))}`, `α ≈ ${sinCeros(grados.toFixed(2))}°`] };
+  }
+  // str.center de python: si sobra un hueco impar, a veces va a la izquierda
+  const centrarPy = (t, w) => { const m = w - t.length; if (m <= 0) return t; const iz = Math.floor(m / 2) + (m & w & 1); return " ".repeat(iz) + t + " ".repeat(m - iz); };
+  function cuentaVectorial(u, v) {
+    const w = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const filas = [["i", "j", "k"], u.map(String), v.map(String)], ancho = Math.max(...filas.flat().map(t => t.length)) + 2;
+    const cajas = filas.map(f => "│" + f.map(t => centrarPy(t, ancho)).join("") + "│");
+    const cuenta = `(${pV(u[1])}·${pV(v[2])} - ${pV(u[2])}·${pV(v[1])}, ${pV(u[2])}·${pV(v[0])} - ${pV(u[0])}·${pV(v[2])}, ${pV(u[0])}·${pV(v[1])} - ${pV(u[1])}·${pV(v[0])})`;
+    const delante = "u × v = ";
+    return { w, lineas: [" ".repeat(delante.length) + cajas[0], delante + cajas[1] + " = " + cuenta + " = " + textoV(w), " ".repeat(delante.length) + cajas[2]] };
+  }
 
   const INTER = {
     grafica: {
@@ -5674,6 +5795,100 @@ const Docs = (() => {
           res: res("lista_spinners() devuelve", `[${nombres.slice(0, 3).map(n => py(n)).join(", ")}, …] (${nombres.length})`) };
       },
     },
+    dibujar_vectores: {
+      nuevo: true, cat: "vectores", titulo: "pantalla.dibujar_vectores()",
+      desc: "Dibuja vectores con flechas en unos ejes, cada uno de un color. Los ejes se ajustan solos. Mueve u y v, o pon v en la punta de u para ver la suma.",
+      p: [{ k: "ux", t: "rango", v: 3, min: -8, max: 8, label: "u: x" }, { k: "uy", t: "rango", v: 2, min: -8, max: 8, label: "u: y" },
+        { k: "vx", t: "rango", v: -1, min: -8, max: 8, label: "v: x" }, { k: "vy", t: "rango", v: 3, min: -8, max: 8, label: "v: y" },
+        { k: "v sale de", t: "sel", v: "el origen", ops: ["el origen", "la punta de u"] }, { k: "u+v", t: "check", v: true },
+        { k: "ancho", t: "rango", v: 41, min: 12, max: 60 }, { k: "alto", t: "rango", v: 13, min: 6, max: 20 },
+        { k: "cuadricula", t: "check", v: true }],
+      alto: 13,
+      vista: p => {
+        const u = [p.ux, p.uy], v = [p.vx, p.vy], suma = [p.ux + p.vx, p.uy + p.vy], punta = p["v sale de"] === "la punta de u";
+        const flechas = [["u", [0, 0], u, "cian"], ["v", punta ? u : [0, 0], punta ? suma : v, "amarillo"]];
+        if (p["u+v"]) flechas.push(["u+v", [0, 0], suma, "verde claro"]);
+        const dic = "{" + [`"u": ${tuplaPy(u)}`, `"v": ${punta ? `(${tuplaPy(u)}, ${tuplaPy(suma)})` : tuplaPy(v)}`]
+          .concat(p["u+v"] ? [`"u+v": ${tuplaPy(suma)}`] : []).join(", ") + "}";
+        const codigo = "vectores = " + dic + "\n" + llamada("dibujar_vectores", [{ crudo: "vectores" }], [["ancho", p.ancho === 41 ? null : p.ancho], ["alto", p.alto === 17 ? null : p.alto],
+          ["cuadricula", p.cuadricula ? null : { crudo: "False" }]]);
+        let g;
+        try { g = vectoresArte(flechas, p.ancho, p.alto, p.cuadricula); }
+        catch (e) { return { elementos: errorEnTerminal(e, 44), ancho: 44, alto: 6, codigo, res: res("lanza", e.tipo) }; }
+        return { elementos: [{ tipo: "arte", x: 1, y: 1, lineas: g.lineas, colores: g.colores }], ancho: Math.max(30, g.ancho), alto: g.alto, codigo,
+          res: res("devuelve", `(${g.ancho}, ${g.alto})`) };
+      },
+    },
+    Vector: {
+      nuevo: true, cat: "vectores", titulo: "pantalla.Vector()",
+      desc: "Un vector que se suma y se resta con + y -, y se multiplica o divide por un número con * y /. Es una tupla, así que x, y = u también vale. Las cuentas salen con fracciones exactas.",
+      p: [{ k: "ux", t: "rango", v: 3, min: -9, max: 9, label: "u: x" }, { k: "uy", t: "rango", v: 4, min: -9, max: 9, label: "u: y" },
+        { k: "vx", t: "rango", v: 1, min: -9, max: 9, label: "v: x" }, { k: "vy", t: "rango", v: -2, min: -9, max: 9, label: "v: y" },
+        { k: "k", t: "rango", v: 2, min: -5, max: 5 }],
+      alto: 9,
+      vista: p => {
+        const u = [p.ux, p.uy], v = [p.vx, p.vy], k = p.k, s = escalarV(u, u), r = raizExacta(s);
+        const modulo = r !== null ? String(r) : floatPy(Math.sqrt(s));
+        let unit;
+        if (s === 0) unit = "ValueError: no tiene dirección";
+        else if (r !== null) unit = "(" + u.map(n => fraccionTxt(n, r)).join(", ") + ")";
+        else unit = "(" + u.map(n => sinCeros(Number((n / Math.sqrt(s)).toFixed(12)).toFixed(4))).join(", ") + ")";
+        const filas = [["u + v", textoV([u[0] + v[0], u[1] + v[1]])], ["u - v", textoV([u[0] - v[0], u[1] - v[1]])],
+          [`${k} * u`, textoV(u.map(n => k * n))], ["u / 2", "(" + u.map(n => fraccionTxt(n, 2)).join(", ") + ")"],
+          ["abs(u)", modulo], ["pantalla.unitario(u)", unit], ["pantalla.producto_escalar(u, v)", String(escalarV(u, v))]];
+        const w = Math.max(...filas.map(f => f[0].length)) + 2, els = [];
+        els.push({ tipo: "texto", x: 1, y: 1, texto: "u = ", color: "cian", negrita: true }, { tipo: "texto", x: 5, y: 1, texto: textoV(u) },
+          { tipo: "texto", x: 16, y: 1, texto: "v = ", color: "amarillo", negrita: true }, { tipo: "texto", x: 20, y: 1, texto: textoV(v) });
+        filas.forEach(([izq, der], i) => {
+          els.push({ tipo: "texto", x: 1, y: 3 + i, texto: izq, color: "gris claro" }, { tipo: "texto", x: 1 + w, y: 3 + i, texto: "→", color: "gris" },
+            { tipo: "texto", x: 4 + w, y: 3 + i, texto: der, color: der.startsWith("ValueError") ? "rojo claro" : "verde claro" });
+        });
+        const codigo = `u = pantalla.Vector${tuplaPy(u)}\nv = pantalla.Vector${tuplaPy(v)}\n\n` +
+          filas.map(([izq, der]) => `print(${izq})`.padEnd(w + 9) + `# ${der}`).join("\n");
+        return { elementos: els, ancho: Math.max(44, ...filas.map(f => w + 3 + f[1].length)), alto: 9, codigo,
+          res: r !== null && s ? res("|u| es exacto:", modulo) : pista("Si la raíz del módulo es exacta, sale un entero; si no, un decimal") };
+      },
+    },
+    producto_escalar: {
+      nuevo: true, cat: "vectores", titulo: "producto_escalar(), modulo() y angulo()",
+      desc: "Con pasos=True escriben la cuenta entera, como en el cuaderno. Si el producto escalar da 0, los vectores son perpendiculares. Mueve u y v.",
+      p: [{ k: "ux", t: "rango", v: 1, min: -9, max: 9, label: "u: x" }, { k: "uy", t: "rango", v: 2, min: -9, max: 9, label: "u: y" },
+        { k: "vx", t: "rango", v: 3, min: -9, max: 9, label: "v: x" }, { k: "vy", t: "rango", v: 1, min: -9, max: 9, label: "v: y" }],
+      alto: 7,
+      vista: p => {
+        const u = [p.ux, p.uy], v = [p.vx, p.vy];
+        const lineas = [cuentaEscalar(u, v), cuentaModulo(u), cuentaModulo(v, "v")];
+        const ceros = !escalarV(u, u) || !escalarV(v, v);
+        let ang = null;
+        if (ceros) lineas.push("ValueError: con el vector (0, 0) no hay ángulo");
+        else { ang = cuentaAngulo(u, v); lineas.push(...ang.lineas); }
+        const els = lineas.map((l, i) => ({ tipo: "texto", x: 1, y: 1 + i, texto: l, color: l.startsWith("ValueError") ? "rojo claro" : null }));
+        const pe = escalarV(u, v), paralelos = u[0] * v[1] - u[1] * v[0] === 0;
+        els.push({ tipo: "texto", x: 1, y: 7, texto: pe === 0 ? "perpendiculares" : paralelos ? "paralelos" : "", color: "verde claro" });
+        const codigo = `u = pantalla.Vector${tuplaPy(u)}\nv = pantalla.Vector${tuplaPy(v)}\n\npantalla.producto_escalar(u, v, pasos=True)\n` +
+          'pantalla.modulo(u, pasos=True)\npantalla.modulo(v, pasos=True, nombre="v")\n' + (ceros ? "" : "pantalla.angulo(u, v, pasos=True)\n") +
+          `print(pantalla.son_perpendiculares(u, v))   # ${py(pe === 0)}\nprint(pantalla.son_paralelos(u, v))         # ${py(paralelos)}`;
+        return { elementos: els, ancho: Math.max(44, ...lineas.map(l => l.length + 2)), alto: 7, codigo,
+          res: ang ? res("angulo() devuelve", floatPy(ang.grados)) : res("angulo() lanza", "ValueError") };
+      },
+    },
+    producto_vectorial: {
+      nuevo: true, cat: "vectores", titulo: "pantalla.producto_vectorial()",
+      desc: "El producto vectorial u × v, solo con vectores de 3 números. Sale perpendicular a los dos. Con pasos=True hace el determinante con i, j y k.",
+      p: [{ k: "u1", t: "rango", v: 1, min: -9, max: 9, label: "u: x" }, { k: "u2", t: "rango", v: 2, min: -9, max: 9, label: "u: y" },
+        { k: "u3", t: "rango", v: 3, min: -9, max: 9, label: "u: z" }, { k: "v1", t: "rango", v: 4, min: -9, max: 9, label: "v: x" },
+        { k: "v2", t: "rango", v: 5, min: -9, max: 9, label: "v: y" }, { k: "v3", t: "rango", v: 6, min: -9, max: 9, label: "v: z" }],
+      alto: 6,
+      vista: p => {
+        const u = [p.u1, p.u2, p.u3], v = [p.v1, p.v2, p.v3], { w, lineas } = cuentaVectorial(u, v);
+        const els = lineas.map((l, i) => ({ tipo: "texto", x: 1, y: 1 + i, texto: l }));
+        const nulo = w.every(n => n === 0);
+        els.push({ tipo: "texto", x: 1, y: 5, texto: nulo ? "da (0, 0, 0): u y v son paralelos" : `u · (u × v) = ${escalarV(u, w)}   v · (u × v) = ${escalarV(v, w)}`, color: "gris claro" });
+        const codigo = `u = (${u.join(", ")})\nv = (${v.join(", ")})\npantalla.producto_vectorial(u, v, pasos=True)\n` +
+          `print(pantalla.producto_mixto(u, v, (0, 0, 1)))   # ${w[2]}`;
+        return { elementos: els, ancho: Math.max(44, ...lineas.map(l => l.length + 2)), alto: 6, codigo, res: res("devuelve", textoV(w)) };
+      },
+    },
   };
   Object.entries(INTER).forEach(([n, x]) => {
     if (!x.nuevo || EJEMPLOS.some(e => e.nombre === n)) return;
@@ -5686,7 +5901,7 @@ const Docs = (() => {
   const CATS = [
     { id: "texto", label: "Texto" }, { id: "dibujo", label: "Dibujar" }, { id: "letras", label: "Letras grandes" },
     { id: "arte", label: "Arte ASCII" }, { id: "raton", label: "Ratón y botones" }, { id: "componentes", label: "Cosas ya hechas" },
-    { id: "mates", label: "Matemáticas" }, { id: "graficas", label: "Gráficas" },
+    { id: "mates", label: "Matemáticas" }, { id: "vectores", label: "Vectores" }, { id: "graficas", label: "Gráficas" },
     { id: "spinners", label: "Spinners" }, { id: "juegos", label: "Juegos" }, { id: "control", label: "Teclado y control" },
     { id: "avanzado", label: "Avanzado" },
   ];
@@ -5910,7 +6125,7 @@ const Docs = (() => {
     loading: "carga", load: "carga", progress: "progreso", progressbar: "barra progreso", input: "pedir", print: "escribir", clear: "limpiar",
     sleep: "pausa", wait: "esperar", box: "caja", button: "boton", mouse: "raton", click: "clic", key: "tecla", keyboard: "tecla",
     table: "tabla", chart: "grafica", plot: "grafica", graph: "grafica", font: "fuente", game: "jugar", matrix: "matriz",
-    fraction: "fraccion", prime: "primo", gcd: "mcd", lcm: "mcm", title: "titulo", big: "grande", line: "linea", select: "elegir",
+    fraction: "fraccion", vectors: "vector", dot: "producto escalar", cross: "producto vectorial", norm: "modulo", magnitude: "modulo", arrow: "flechas", prime: "primo", gcd: "mcd", lcm: "mcm", title: "titulo", big: "grande", line: "linea", select: "elegir",
     choose: "elegir", form: "formulario", spin: "spinner", draw: "dibujar", text: "texto", write: "escribir", colour: "color",
   };
   let INDICE = null;
@@ -6169,7 +6384,7 @@ const Inicio = (() => {
     fs = Math.max(8, Math.min(18, fs));
   }
   function elementos() {
-    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.4" }];
+    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.5" }];
     const menuEl = { tipo: "menu", opciones: OPCIONES, titulo: "¿Qué quieres hacer?", ayudas: OPCIONES.map(o => AYUDA[o]), color: "cian" };
     const g = menuGeom(menuEl);
     let fuente = null, titulo = null;
@@ -6220,7 +6435,7 @@ const Inicio = (() => {
     try { reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     if (reducido) { fase = "menu"; dibujar(); return; }
     fase = "arranque";
-    tipeo = { lineas: ["Python 3 · pantalla 0.4 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
+    tipeo = { lineas: ["Python 3 · pantalla 0.5 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
     tipeo.lineas[0] = tipeo.lineas[0].slice(0, cols);
     tipeo.letra = tipeo.lineas[0].length;
     dibujarArranque();
@@ -6327,7 +6542,7 @@ const Inicio = (() => {
     l.push("AYUDA = {");
     OPCIONES.forEach(o => l.push(`    ${py(o)}: ${py(AYUDA[o])},`));
     l.push("}", "", "pantalla.limpiar()");
-    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.4"]]));
+    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.5"]]));
     if (g.fuente) l.push(llamada("grande", ["pantalla"], [["y", g.yTitulo], ["fuente", g.fuente === "bloques" ? null : g.fuente], ["color", "amarillo"]]));
     l.push(llamada("centrar", [g.sub], [["y", g.ySub], ["color", "gris claro"]]));
     l.push(llamada("centrar", [g.pie], [["y", g.yPie], ["color", "gris"]]));

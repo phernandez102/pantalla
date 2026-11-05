@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pantalla"
-version = "0.4.0"
+version = "0.5.0"
 description = "gotoxy para el siglo XXI: colores, cajas, menús, letras ASCII, ratón, spinners y juegos sin bucles en la terminal. En español y pensada para aprender Python."
 readme = "README.md"
 requires-python = ">=3.8"
