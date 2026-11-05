@@ -1,5 +1,10 @@
 # Cambios
 
+## 0.3.1
+
+- El paquete ya solo lleva la librería (antes iban también la web y otros archivos que no hacían falta).
+- README con capturas.
+
 ## 0.3.0
 
 - Letras ASCII: `grande()` y `texto_grande()` con `fuente=` (32 fuentes FIGlet). `lista_fuentes()` dice cuáles hay.

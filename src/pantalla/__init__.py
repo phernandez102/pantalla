@@ -36,7 +36,7 @@ from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, i
                        terminar, titulo_ventana, volver_a_posicion)
 from .texto import centrar, escribir, escribir_derecha, escribir_lento
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from .terminal import _abrir_en_consola_si_idle as _abrir
 

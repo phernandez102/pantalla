@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src=".github/img/banner.svg" alt="pantalla: gotoxy para el siglo XXI" width="760">
+<img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/banner.svg" alt="pantalla: gotoxy para el siglo XXI" width="760">
 
 <br>
 
 [![PyPI](https://img.shields.io/pypi/v/pantalla?color=4fd1c5&label=pip%20install%20pantalla)](https://pypi.org/project/pantalla/)
 [![Python](https://img.shields.io/badge/python-3.8%2B-f2c14e)](https://www.python.org/)
-[![Windows · Linux · Mac](https://img.shields.io/badge/Windows%20·%20Linux%20·%20Mac-c678dd)](#dónde-funciona)
-[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-7ccf6a)](LICENSE)
+[![Windows · Linux · Mac](https://img.shields.io/badge/Windows%20·%20Linux%20·%20Mac-c678dd)](https://github.com/phernandez102/pantalla#dónde-funciona)
+[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-7ccf6a)](https://github.com/phernandez102/pantalla/blob/main/LICENSE)
 
 **[Constructor web](https://phernandez102.github.io/pantalla/)** ·
-**[Instalar](#instalar)** ·
-**[Todo lo que hay](#todo-lo-que-hay)** ·
-**[Hacer un juego](#hacer-un-juego)** ·
-**[Ejemplos](#ejemplos)**
+**[Instalar](https://github.com/phernandez102/pantalla#instalar)** ·
+**[Todo lo que hay](https://github.com/phernandez102/pantalla#todo-lo-que-hay)** ·
+**[Hacer un juego](https://github.com/phernandez102/pantalla#hacer-un-juego)** ·
+**[Ejemplos](https://github.com/phernandez102/pantalla#ejemplos)**
 
 </div>
 
@@ -40,20 +40,21 @@ pantalla.esperar()
 
 </td>
 <td width="52%">
-<img src=".github/img/hola.svg" alt="Lo que sale en la terminal">
+<img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/hola.svg" alt="Lo que sale en la terminal">
 </td>
 </tr>
 </table>
 
-- **Sin dependencias.** Solo hace falta Python 3.8 o más nuevo.
-- **En cualquier sitio.** Windows, Linux y Mac. Se mezcla sin problemas con `print()` e `input()`.
-- **Errores en español.** `No conozco el color 'rojoo'. ¿Querías decir 'rojo'?`
-- **Constructor web.** Dibujas la pantalla con el ratón, copias el código y lo pegas en tu programa.
+- No necesita instalar nada más (solo Python 3.8 o más nuevo).
+- Funciona en Windows, Linux y Mac.
+- Se mezcla sin problemas con `print()` e `input()`.
+- Si te equivocas, los errores te dicen qué ha pasado en español: `No conozco el color 'rojoo'. ¿Querías decir 'rojo'?`
+- Tiene un **constructor web**: dibujas la pantalla con el ratón, copias el código y lo pegas en tu programa.
 
 <table>
 <tr>
-<td valign="top" width="52%"><img src=".github/img/menu.svg" alt="Un menú con secciones hecho con pantalla.menu()"></td>
-<td valign="top" width="48%"><img src=".github/img/cajas.svg" alt="Cajas, barras, arte ASCII y una tabla"></td>
+<td valign="top" width="52%"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/menu.svg" alt="Un menú con secciones hecho con pantalla.menu()"></td>
+<td valign="top" width="48%"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/cajas.svg" alt="Cajas, barras, arte ASCII y una tabla"></td>
 </tr>
 <tr>
 <td align="center"><sub><code>pantalla.menu({...})</code> con secciones y ayuda</sub></td>
@@ -442,8 +443,8 @@ Es una página donde dibujas la pantalla con el ratón: cajas, textos, líneas, 
 
 <table>
 <tr>
-<td><img src=".github/img/constructor.png" alt="El constructor: herramientas a la izquierda, la terminal en el centro y las capas a la derecha"></td>
-<td><img src=".github/img/docs.png" alt="La documentación visual: cada función con un ejemplo que se dibuja en vivo"></td>
+<td><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/constructor.png" alt="El constructor: herramientas a la izquierda, la terminal en el centro y las capas a la derecha"></td>
+<td><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/docs.png" alt="La documentación visual: cada función con un ejemplo que se dibuja en vivo"></td>
 </tr>
 <tr>
 <td align="center"><sub>El constructor</sub></td>
