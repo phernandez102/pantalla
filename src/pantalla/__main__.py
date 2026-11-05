@@ -226,6 +226,30 @@ def demo_graficas():
     pantalla.tecla()
 
 
+def demo_cargas():
+    pantalla.limpiar()
+    pantalla.cabecera("Barras y pantallas de carga")
+    pantalla.ocultar_cursor()
+    colores = ["verde", "cian", "morado claro", "amarillo", "verde claro", "azul claro", "rosa", "naranja",
+               "cian claro", "rojo claro"]
+    estilos = pantalla.lista_barras()
+    for i in range(101):
+        for n, estilo in enumerate(estilos):
+            pantalla.escribir('estilo="%s"' % estilo, 3, 3 + n, color="gris")
+            pantalla.barra_progreso(i, 100, 24, 3 + n, ancho=30, estilo=estilo, color=colores[n])
+        pantalla.escribir('color_final="verde"', 3, 4 + len(estilos), color="gris")
+        pantalla.barra_progreso(i, 100, 24, 4 + len(estilos), ancho=30, estilo="suave", color="rojo",
+                                color_final="verde")
+        pantalla.pausa(0.02)
+    pantalla.pie("Pulsa una tecla para ver una pantalla de carga")
+    pantalla.tecla()
+    pantalla.pantalla_de_carga("CARGANDO", fuente="ansi_shadow", color="cian", color_final="morado claro",
+                               tareas=["Leyendo el mapa", "Colocando enemigos", "Afinando los sonidos",
+                                       "Puliendo los gráficos"], segundos=5, marco="redondo",
+                               consejos=["Consejo: pantalla_de_carga() también acepta tus funciones",
+                                         "Consejo: con total=None la barra va y viene"])
+
+
 def main():
     import sys
 
@@ -238,7 +262,7 @@ def main():
 
     secciones = {
         "Lo básico": ["Colores", "Cajas y dibujos", "Fuentes ASCII", "Teclado"],
-        "Cosas ya hechas": ["Menús", "Tablas, barras y mensajes", "Pedir datos"],
+        "Cosas ya hechas": ["Menús", "Tablas, barras y mensajes", "Pantallas de carga", "Pedir datos"],
         "Más": ["Matrices", "Fracciones", "Gráficas", "Mover una @", "Ver posiciones", "Salir"],
     }
     ayudas = {
@@ -248,6 +272,7 @@ def main():
         "Teclado": "Pulsa teclas y mira qué devuelve pantalla.tecla()",
         "Menús": "menu() con ayudas e iconos, elegir() y el menú con secciones",
         "Tablas, barras y mensajes": "tabla, barra_progreso, cargando, mensaje",
+        "Pantallas de carga": "Los estilos de barra_progreso() y pantalla_de_carga()",
         "Pedir datos": "pedir, pedir_numero y confirmar",
         "Matrices": "pedir_matriz(), matriz(), determinante() e inversa()",
         "Fracciones": "escribir_cuenta(), descomponer(), mcd, mcm y primos",
@@ -258,8 +283,8 @@ def main():
     }
     iconos = {
         "Colores": "■", "Cajas y dibujos": "┌┐", "Fuentes ASCII": "A", "Teclado": "Aa", "Menús": "≡",
-        "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Matrices": "[ ]", "Fracciones": "½",
-        "Gráficas": "~",
+        "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Pantallas de carga": "▰▱", "Matrices": "[ ]",
+        "Fracciones": "½", "Gráficas": "~",
         "Mover una @": "@", "Ver posiciones": "╋", "Salir": "←",
     }
     pantalla.iniciar(titulo="pantalla · demo")
@@ -282,6 +307,8 @@ def main():
                 demo_menus()
             elif elegida == "Tablas, barras y mensajes":
                 demo_cosas()
+            elif elegida == "Pantallas de carga":
+                demo_cargas()
             elif elegida == "Pedir datos":
                 demo_pedir()
             elif elegida == "Matrices":

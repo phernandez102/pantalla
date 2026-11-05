@@ -135,6 +135,31 @@ def codigo_color(color, fondo=False):
     return "%d;2;%d;%d;%d" % ((48 if fondo else 38,) + rgb)
 
 
+# más o menos como los pinta windows terminal, para poder mezclar colores
+_PALETA = {
+    "negro": (12, 12, 12), "rojo": (197, 15, 31), "verde": (19, 161, 14), "amarillo": (193, 156, 0),
+    "azul": (0, 55, 218), "morado": (136, 23, 152), "cian": (58, 150, 221), "grisclaro": (204, 204, 204),
+    "gris": (118, 118, 118), "rojoclaro": (231, 72, 86), "verdeclaro": (22, 198, 12),
+    "amarilloclaro": (249, 241, 165), "azulclaro": (59, 120, 255), "moradoclaro": (180, 0, 158),
+    "cianclaro": (97, 214, 214), "blanco": (242, 242, 242),
+}
+
+
+def _rgb(color):
+    """El color en (r, g, b), o None si es de los de número (0-255)."""
+    codigo = codigo_color(color)
+    if codigo.startswith("38;2;"):
+        return tuple(int(n) for n in codigo.split(";")[2:])
+    if codigo.startswith("38;5;"):
+        return None
+    nombre = _ALIAS.get(_normalizar(color), _normalizar(color))
+    return _PALETA[nombre]
+
+
+def _mezclar(a, b, t):
+    return tuple(int(round(x + (y - x) * t)) for x, y in zip(a, b))
+
+
 def estilo(color=None, fondo=None, negrita=False, tenue=False, cursiva=False,
            subrayado=False, parpadeo=False, invertido=False, tachado=False):
     """Devuelve el código ANSI de un estilo (lo usan las demás funciones por dentro)."""

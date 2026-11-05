@@ -702,7 +702,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 <header class="cabeza">
   <div class="marca">
     <h1>pantalla<span>.</span>constructor</h1>
-    <small>para la librería <code>pantalla</code> 0.3</small>
+    <small>para la librería <code>pantalla</code> 0.4</small>
   </div>
   <ol class="pasos" aria-label="Cómo se usa">
     <li><b>1</b> Dibuja en la terminal</li>
@@ -1580,7 +1580,75 @@ function barraTexto(e) {
   const total = Number(e.total ?? 100), valor = Number(e.valor ?? 0);
   const fr = total === 0 ? 1 : Math.max(0, Math.min(1, valor / total));
   const llenos = Math.round(fr * ancho);
-  return { llenos, ancho, pct: e.porcentaje === false ? "" : " " + String(Math.round(fr * 100)).padStart(3, " ") + "%" };
+  return { fr, llenos, ancho, pct: e.porcentaje === false ? "" : " " + String(Math.round(fr * 100)).padStart(3, " ") + "%" };
+}
+
+// los estilos de barra_progreso(estilo=...), igual que en python
+const BARRAS = { bloques: ["█", "░"], suave: null, linea: null, ascii: null, puntos: ["⣿", "⣀"], cuadros: ["■", "□"],
+  circulos: ["●", "○"], rombos: ["◆", "◇"], flechas: ["▰", "▱"], rayas: ["▮", "▯"] };
+const FONDO_BARRA = "#303030";
+function estiloBarra(e) { return Object.prototype.hasOwnProperty.call(BARRAS, e.estilo) ? e.estilo : "bloques"; }
+function letrasBarra(e) { return BARRAS[estiloBarra(e)] || BARRAS.bloques; }
+// lleno y vacío solo cuentan si no son los del estilo
+function propiosBarra(e) {
+  const d = letrasBarra(e);
+  return { lleno: e.lleno && e.lleno !== d[0] ? e.lleno : null, vacio: e.vacio && e.vacio !== d[1] ? e.vacio : null };
+}
+function hexRgb(c) { const h = colorCss(c) || "#ffffff"; return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function mezclaHex(a, b, t) {
+  const A = hexRgb(a), B = hexRgb(b);
+  return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+function celdasBarra(fr, ancho, e, trozo) {
+  let estilo = estiloBarra(e);
+  const color = e.color || "verde";
+  const cods = Array.from({ length: ancho }, (_, i) => e.color_final ? mezclaHex(color, e.color_final, i / Math.max(1, ancho - 1)) : color);
+  const llena = i => trozo ? i >= trozo[0] && i < trozo[0] + trozo[1] : i < Math.round(fr * ancho);
+  let { lleno, vacio } = propiosBarra(e);
+  if (lleno || vacio) {
+    const d = letrasBarra(e);
+    lleno = letras(lleno || d[0])[0]; vacio = letras(vacio || d[1])[0];
+    estilo = "propio";
+  }
+  const out = [], gris = { fg: "gris" };
+  if (estilo === "ascii") {
+    const dentro = Math.max(1, ancho - 2);
+    let s;
+    if (trozo) {
+      const d = Math.min(trozo[0], Math.max(0, dentro - trozo[1]));
+      s = Array.from({ length: dentro }, (_, i) => i >= d && i < d + trozo[1] ? "=" : " ").join("");
+    } else {
+      const n = Math.round(fr * dentro);
+      s = n >= dentro ? "=".repeat(dentro) : ("=".repeat(Math.max(0, n - 1)) + (n ? ">" : "")).padEnd(dentro, " ");
+    }
+    out.push({ c: "[", st: gris });
+    for (const c of s) out.push({ c, st: { fg: cods[0] } });
+    out.push({ c: "]", st: gris });
+    return out;
+  }
+  if (estilo === "suave") {
+    const oct = Math.round(fr * ancho * 8);
+    for (let i = 0; i < ancho; i++) {
+      if (trozo) out.push(llena(i) ? { c: "█", st: { fg: cods[i] } } : { c: " ", st: { bg: FONDO_BARRA } });
+      else if (oct >= (i + 1) * 8) out.push({ c: "█", st: { fg: cods[i] } });
+      else if (oct > i * 8) out.push({ c: "▏▎▍▌▋▊▉"[oct - i * 8 - 1], st: { fg: cods[i], bg: FONDO_BARRA } });
+      else out.push({ c: " ", st: { bg: FONDO_BARRA } });
+    }
+    return out;
+  }
+  if (estilo === "linea") {
+    const m = Math.round(fr * ancho * 2);
+    for (let i = 0; i < ancho; i++) {
+      if (trozo) out.push({ c: "━", st: llena(i) ? { fg: cods[i] } : gris });
+      else if (m >= (i + 1) * 2) out.push({ c: "━", st: { fg: cods[i] } });
+      else if (m > i * 2) out.push({ c: "╸", st: { fg: cods[i] } });
+      else out.push({ c: "━", st: gris });
+    }
+    return out;
+  }
+  if (!lleno) [lleno, vacio] = BARRAS[estilo];
+  for (let i = 0; i < ancho; i++) out.push(llena(i) ? { c: lleno, st: { fg: cods[i] } } : { c: vacio, st: gris });
+  return out;
 }
 
 function lineasArte(e) { return Array.isArray(e.lineas) ? e.lineas.map(String) : String(e.lineas ?? "").split("\n"); }
@@ -1642,8 +1710,7 @@ function dibujarElemento(P, e, editor) {
     case "boton": poner(P, e.x, e.y, " " + (e.texto ?? "") + " ", e._hover ? { fg: e.color_hover || "negro", bg: e.fondo_hover || "amarillo", b: true } : { fg: e.color || "blanco", bg: e.fondo || "azul" }); break;
     case "barra": {
       const b = barraTexto(e);
-      poner(P, e.x, e.y, repetir(e.lleno || "█", b.llenos), { fg: e.color || "verde" });
-      poner(P, e.x + b.llenos, e.y, repetir(e.vacio || "░", b.ancho - b.llenos), { fg: "gris" });
+      celdasBarra(b.fr, b.ancho, e, e._trozo).forEach((k, i) => ponerCelda(P, e.x + i, e.y, k.c, k.st));
       if (b.pct) poner(P, e.x + b.ancho, e.y, b.pct, {});
       break;
     }
@@ -1953,7 +2020,11 @@ function codigoElemento(e, ctx) {
         ["al_clic", { crudo: "lambda: " + py(e.texto ?? "") }]];
       return [`${v} = ` + llamada("boton", [e.texto ?? "", e.x, e.y], kw)];
     }
-    case "barra": return [llamada("barra_progreso", [Number(e.valor ?? 0), Number(e.total ?? 100), e.x, e.y], [["ancho", (e.ancho || 30) !== 30 ? e.ancho : null], ["color", (e.color || "verde") !== "verde" ? e.color : null], ["porcentaje", e.porcentaje === false ? { crudo: "False" } : null], ["lleno", (e.lleno || "█") !== "█" ? e.lleno : null], ["vacio", (e.vacio || "░") !== "░" ? e.vacio : null]])];
+    case "barra": {
+      const propios = propiosBarra(e), estilo = estiloBarra(e);
+      return [llamada("barra_progreso", [Number(e.valor ?? 0), Number(e.total ?? 100), e.x, e.y], [["ancho", (e.ancho || 30) !== 30 ? e.ancho : null], ["color", (e.color || "verde") !== "verde" ? e.color : null],
+        ["estilo", estilo !== "bloques" ? estilo : null], ["color_final", e.color_final || null], ["porcentaje", e.porcentaje === false ? { crudo: "False" } : null], ["lleno", propios.lleno], ["vacio", propios.vacio]])];
+    }
     case "cabecera": return [llamada("cabecera", [e.titulo ?? ""], [["color", (e.color || "cian") !== "cian" ? e.color : null], ["caracter", (e.caracter || "═") !== "═" ? e.caracter : null]])];
     case "pie": return [llamada("pie", [e.texto ?? ""], [["color", (e.color || "gris") !== "gris" ? e.color : null]])];
     case "tabla": {
@@ -3323,7 +3394,7 @@ const CAMPOS = {
   menu: ["menu_editor", "titulo", "x", "y", "color", "color_seleccion", "estilo", "ayuda_sitio", "centrar"],
   boton: ["texto", "x", "y", "color", "fondo", "color_hover", "fondo_hover", "centrar", "nombre"],
   botones: ["opciones", "x", "y", "horizontal", "separacion", "color", "fondo", "color_hover", "fondo_hover", "centrar"],
-  barra: ["x", "y", "valor", "total", "ancho", "color", "lleno", "vacio", "porcentaje", "nombre"],
+  barra: ["x", "y", "valor", "total", "ancho", "estilo_barra", "color", "color_final", "lleno", "vacio", "porcentaje", "nombre"],
   tabla: ["datos", "primera_cabecera", "x", "y", "estilo", "color", "color_cabecera", "centrar", "nombre"],
   mensaje: ["texto", "titulo", "color", "color_borde", "estilo", "esperar"],
   matriz: ["valores", "nombre_matriz", "x", "y", "det", "color", "color_nombre", "centrar"],
@@ -3333,10 +3404,10 @@ const CAMPOS = {
   pie: ["texto", "color"],
 };
 const ETIQUETA = { x: "x (columna)", y: "y (fila)", ancho: "Ancho", alto: "Alto", largo: "Largo", estilo: "Estilo del borde", titulo: "Título", color: "Color", fondo: "Fondo", relleno: "Borrar lo de dentro", texto: "Texto", negrita: "Negrita", subrayado: "Subrayado", caracter: "Carácter", nombre: "Nombre (para usarlo en tu programa)", fuente: "Fuente", lineas: "El dibujo (puedes escribir encima)", transparente: "Los espacios dejan ver lo de debajo", opciones: "Opciones (una por línea)", ayudas: "Ayuda de cada opción (una por línea, en el mismo orden)", color_seleccion: "Color de la elegida", marcada: "Opción marcada al empezar", color_hover: "Color al pasar el ratón", fondo_hover: "Fondo al pasar el ratón", valor: "Valor", total: "Total", lleno: "Carácter lleno", vacio: "Carácter vacío", porcentaje: "Enseñar el %",
-  alinear: "Alineación", margen: "Margen derecho", horizontal: "En fila (si no, en columna)", separacion: "Separación", datos: "Datos (una fila por línea, columnas separadas por | )", primera_cabecera: "La primera línea son las cabeceras", color_cabecera: "Color de las cabeceras", color_borde: "Color del borde", esperar: "Esperar a que pulse una tecla", valores: "Números (una fila por línea, separados por espacios)", nombre_matriz: "Nombre delante (A = )", det: "Con barras (determinante)", color_nombre: "Color del nombre", estilo_spinner: "Estilo", color_texto: "Color del texto", dibujo: "El dibujo (puede tener varias líneas)", flechas: "Se mueve con las flechas", ayuda_x: "ayuda_x (columna)", ayuda_y: "ayuda_y (fila)", color_ayuda: "Color de la ayuda", capa: "Capa (más alta, más delante)" };
+  alinear: "Alineación", margen: "Margen derecho", horizontal: "En fila (si no, en columna)", separacion: "Separación", datos: "Datos (una fila por línea, columnas separadas por | )", primera_cabecera: "La primera línea son las cabeceras", color_cabecera: "Color de las cabeceras", color_borde: "Color del borde", esperar: "Esperar a que pulse una tecla", valores: "Números (una fila por línea, separados por espacios)", nombre_matriz: "Nombre delante (A = )", det: "Con barras (determinante)", color_nombre: "Color del nombre", estilo_spinner: "Estilo", estilo_barra: "Estilo de la barra", color_final: "Color final (degradado)", color_texto: "Color del texto", dibujo: "El dibujo (puede tener varias líneas)", flechas: "Se mueve con las flechas", ayuda_x: "ayuda_x (columna)", ayuda_y: "ayuda_y (fila)", color_ayuda: "Color de la ayuda", capa: "Capa (más alta, más delante)" };
 const NUMEROS = ["x", "y", "ancho", "alto", "largo", "valor", "total", "marcada", "separacion", "margen", "ayuda_x", "ayuda_y"];
 const NUM_OPCIONAL = ["margen", "ayuda_x", "ayuda_y"];
-const COLORES_CAMPO = ["color", "fondo", "color_seleccion", "color_hover", "fondo_hover", "color_ayuda", "color_cabecera", "color_borde", "color_nombre", "color_texto"];
+const COLORES_CAMPO = ["color", "color_final", "fondo", "color_seleccion", "color_hover", "fondo_hover", "color_ayuda", "color_cabecera", "color_borde", "color_nombre", "color_texto"];
 const CARACTER_CAMPO = ["caracter", "lleno", "vacio"];
 const SI_POR_DEFECTO = ["transparente", "porcentaje", "primera_cabecera", "horizontal", "esperar", "flechas"];
 const CASILLAS = ["negrita", "subrayado", "relleno", "det"].concat(SI_POR_DEFECTO);
@@ -3391,6 +3462,8 @@ const AYUDA_CAMPO = {
   total: "El valor de la barra llena (normalmente 100).",
   lleno: "El carácter de la parte llena (<code>lleno=</code>).",
   vacio: "El carácter de la parte vacía (<code>vacio=</code>).",
+  estilo_barra: "Cómo se dibuja la barra (<code>estilo=</code>): bloques, suave, línea, ascii, puntos, círculos...",
+  color_final: "Si eliges uno, la barra va cambiando de «Color» a este (<code>color_final=</code>).",
   porcentaje: "Enseña el número con % al final de la barra (<code>porcentaje=True</code>).",
   centrar: "Lo coloca justo en el centro, de izquierda a derecha.",
   alinear: "Izquierda: <code>escribir(texto, x, y)</code>. Centro: <code>centrar(texto, y)</code>, siempre en medio aunque la terminal sea más ancha. Derecha: <code>escribir_derecha(texto, y)</code>, pegado al borde derecho.",
@@ -3707,7 +3780,11 @@ function pintarPropiedades() {
     }
     if (campo === "fuente") return `<div class="ancho"><label for="p-fuente-btn" style="margin-bottom:4px">${ETIQUETA.fuente}</label><button type="button" class="fuente-btn" id="p-fuente-btn" data-abre-pop><span>${escapar(e.fuente || "bloques")}</span><span>▾ ver todas</span></button></div>`;
     if (campo === "caracter" && e.tipo === "grande" && e.fuente && e.fuente !== "bloques") return "";
-    if (CARACTER_CAMPO.includes(campo)) return campoCaracter(id, ETIQUETA[campo], v ?? (campo === "lleno" ? "█" : campo === "vacio" ? "░" : campo === "caracter" && e.tipo === "cabecera" ? "═" : ""));
+    if (campo === "estilo_barra") {
+      const vista = n => BARRAS[n] ? BARRAS[n][0].repeat(3) + BARRAS[n][1].repeat(2) : n === "suave" ? "██▌" : n === "linea" ? "━━╸━━" : "[=> ]";
+      return `<label for="${id}">${ETIQUETA.estilo_barra}<select id="${id}">${Object.keys(BARRAS).map(n => `<option value="${n}" ${n === estiloBarra(e) ? "selected" : ""}>${n}  ${vista(n)}</option>`).join("")}</select></label>`;
+    }
+    if (CARACTER_CAMPO.includes(campo)) return campoCaracter(id, ETIQUETA[campo], v ?? (campo === "lleno" ? (e.tipo === "barra" ? letrasBarra(e)[0] : "█") : campo === "vacio" ? (e.tipo === "barra" ? letrasBarra(e)[1] : "░") : campo === "caracter" && e.tipo === "cabecera" ? "═" : ""));
     if (campo === "capa") return `<label for="${id}">${ETIQUETA.capa}<input type="number" step="1" min="-99" max="99" id="${id}" value="${v ?? 0}"></label>`;
     if (NUMEROS.includes(campo)) {
       if ((campo === "x" && e.tipo === "texto" && e.alinear && e.alinear !== "izquierda") || (campo === "margen" && e.alinear !== "derecha")) return "";
@@ -3780,6 +3857,11 @@ function cambiarCampo(el) {
     if (el.value === "*propio") { e.estilo = "*"; } else e.estilo = el.value;
     rehacerPanel = true;
   } else if (campo === "estilo_spinner") e.estilo = el.value;
+  else if (campo === "estilo_barra") {
+    if (el.value === "bloques") delete e.estilo; else e.estilo = el.value;
+    delete e.lleno; delete e.vacio;
+    rehacerPanel = true;
+  }
   else if (campo === "alinear") { if (el.value === "izquierda") delete e.alinear; else e.alinear = el.value; rehacerPanel = true; }
   else if (campo.endsWith("-hex")) {
     e[campo.replace("-hex", "")] = el.value;
@@ -4820,17 +4902,20 @@ const Docs = (() => {
       tecla: (s, t) => { s.teclas = [t].concat(s.teclas || []).slice(0, 6); return true; },
     },
     barra_progreso: {
-      p: [{ k: "valor", t: "rango", v: 65, min: 0, max: 100 }, { k: "ancho", t: "num", v: 30, min: 5, max: 32 }, { k: "color", t: "color", v: "verde" },
-        { k: "lleno", t: "car", v: "█" }, { k: "vacio", t: "car", v: "░" }, { k: "porcentaje", t: "check", v: true }],
+      p: [{ k: "valor", t: "rango", v: 65, min: 0, max: 100 }, { k: "ancho", t: "num", v: 30, min: 5, max: 32 },
+        { k: "estilo", t: "sel", v: "bloques", ops: () => Object.keys(BARRAS) }, { k: "color", t: "color", v: "verde" },
+        { k: "color_final", t: "color", v: "", ninguno: true }, { k: "porcentaje", t: "check", v: true }],
       alto: 4,
       vista: (p, s) => {
         const valor = s.corriendo ? s.v : p.valor;
         const els = [{ tipo: "texto", x: 2, y: 1, texto: s.corriendo ? "Cargando nivel..." : "Barra de progreso", color: "gris claro" },
-          { tipo: "barra", x: 2, y: 3, valor, total: 100, ancho: p.ancho, color: p.color || "verde", porcentaje: p.porcentaje, lleno: p.lleno || "█", vacio: p.vacio || "░" }];
+          { tipo: "barra", x: 2, y: 3, valor, total: 100, ancho: p.ancho, color: p.color || "verde", porcentaje: p.porcentaje,
+            estilo: p.estilo, color_final: p.color_final || null }];
         const kw = [["ancho", p.ancho === 30 ? null : p.ancho], ["color", p.color === "verde" ? null : p.color],
-          ["porcentaje", p.porcentaje ? null : { crudo: "False" }], ["lleno", p.lleno === "█" ? null : p.lleno], ["vacio", p.vacio === "░" ? null : p.vacio]];
+          ["estilo", p.estilo === "bloques" ? null : p.estilo], ["color_final", p.color_final || null],
+          ["porcentaje", p.porcentaje ? null : { crudo: "False" }]];
         const codigo = "for i in range(101):\n    " + llamada("barra_progreso", [0, 100, 2, 3], kw).replace("(0, ", "(i, ") + "\n    pantalla.pausa(0.02)";
-        return { elementos: els, codigo, res: s.corriendo ? res("valor =", String(Math.round(valor))) : pista("Mueve «valor» o pulsa Ejecutar para ver el bucle") };
+        return { elementos: els, codigo, res: s.corriendo ? res("valor =", String(Math.round(valor))) : pista("Cambia «estilo», mueve «valor» o pulsa Ejecutar para ver el bucle") };
       },
       correr: (s, pintarYa) => {
         s.corriendo = true; s.v = 0;
@@ -4843,6 +4928,84 @@ const Docs = (() => {
           s.t = setTimeout(paso, 16);
         };
         s.t = setTimeout(paso, 16);
+      },
+    },
+    lista_barras: {
+      nuevo: true, cat: "componentes", despues: "barra_progreso", titulo: "pantalla.lista_barras()",
+      desc: "Todos los estilos de barra_progreso() y de pantalla_de_carga(), llenándose a la vez. Con color_final la barra cambia de color poco a poco.",
+      alto: 12,
+      anim: s => { s.t0 = s.t0 || performance.now(); return 40; },
+      vista: (p, s) => {
+        const t = performance.now() - (s.t0 || performance.now());
+        const v = Math.min(100, (t % 4200) / 30);
+        const colores = ["verde", "cian", "morado claro", "amarillo", "verde claro", "azul claro", "rosa", "naranja", "cian claro", "rojo claro"];
+        const els = [];
+        Object.keys(BARRAS).forEach((n, i) => {
+          els.push({ tipo: "texto", x: 2, y: 1 + i, texto: py(n), color: "gris" });
+          els.push({ tipo: "barra", x: 14, y: 1 + i, valor: v, total: 100, ancho: 24, estilo: n, color: colores[i] });
+        });
+        els.push({ tipo: "texto", x: 2, y: 12, texto: "color_final", color: "gris" });
+        els.push({ tipo: "barra", x: 14, y: 12, valor: v, total: 100, ancho: 24, estilo: "suave", color: "rojo", color_final: "verde" });
+        return { elementos: els, ancho: 46,
+          codigo: 'for estilo in pantalla.lista_barras():\n    pantalla.barra_progreso(60, 100, estilo=estilo)\n    print()\n\npantalla.barra_progreso(60, 100, estilo="suave", color="rojo", color_final="verde")',
+          res: res("lista_barras() devuelve", "[" + Object.keys(BARRAS).slice(0, 4).map(n => py(n)).join(", ") + ", …]") };
+      },
+    },
+    pantalla_de_carga: {
+      nuevo: true, cat: "componentes", despues: "lista_barras", titulo: "pantalla.pantalla_de_carga()",
+      desc: "Una pantalla de carga como la de los juegos: título, barra en el centro, lo que está haciendo y consejos que van cambiando. Puede ser de mentira (segundos=), hacer tus tareas o avanzar con with.",
+      p: [{ k: "titulo", t: "texto", v: "Cargando nivel 2" }, { k: "forma", t: "sel", v: "segundos", ops: ["segundos", "tareas", "with"] },
+        { k: "estilo", t: "sel", v: "suave", ops: () => Object.keys(BARRAS) }, { k: "color", t: "color", v: "cian" },
+        { k: "color_final", t: "color", v: "morado claro", ninguno: true }, { k: "consejo", t: "texto", v: "Consejo: pulsa P para pausar" },
+        { k: "total=None", t: "check", v: false }],
+      alto: 9,
+      anim: s => { s.t0 = s.t0 || performance.now(); return 50; },
+      vista: (p, s) => {
+        const W = 52, t = performance.now() - (s.t0 || performance.now());
+        const ciclo = t % 4400, acabado = ciclo > 3600, sinTotal = !!p["total=None"];
+        // va a trompicones, como las de verdad
+        const marcas = [[0, 0], [500, 18], [1100, 35], [1900, 62], [2700, 80], [3500, 100]];
+        let v = 100;
+        for (let i = 1; i < marcas.length; i++) if (ciclo <= marcas[i][0]) { const [t0, v0] = marcas[i - 1], [t1, v1] = marcas[i]; v = v0 + (v1 - v0) * (ciclo - t0) / (t1 - t0); break; }
+        const tareas = p.forma === "with" ? ["mapa_1.dat", "mapa_2.dat", "mapa_3.dat"] : ["Leyendo el mapa", "Colocando enemigos", "Afinando los sonidos"];
+        const titulo = p.titulo || "Cargando";
+        const anchoBarra = 30, pct = sinTotal ? 0 : 5;
+        const xb = Math.floor((W - anchoBarra - pct) / 2) + 1;
+        const els = [{ tipo: "texto", x: Math.floor((W - letras(titulo).length) / 2) + 1, y: 2, texto: titulo, color: p.color || "cian", negrita: true }];
+        const barra = { tipo: "barra", x: xb, y: 4, valor: acabado || !sinTotal ? v : 0, total: 100, ancho: anchoBarra, estilo: p.estilo, color: p.color || "cian",
+          color_final: p.color_final || null, porcentaje: !sinTotal };
+        if (sinTotal && !acabado) {
+          const largo = 6, vuelta = anchoBarra - largo, paso = Math.floor(t / 50) % (2 * vuelta);
+          barra._trozo = [paso < vuelta ? paso : 2 * vuelta - paso, largo];
+        }
+        els.push(barra);
+        const [ms, fr] = SPIN.dots;
+        if (acabado) {
+          els.push({ tipo: "texto", x: xb, y: 5, texto: "✔", color: "verde" }, { tipo: "texto", x: xb + 2, y: 5, texto: "Listo" });
+        } else {
+          els.push({ tipo: "texto", x: xb, y: 5, texto: fr[Math.floor(t / ms) % fr.length], color: p.color || "cian" },
+            { tipo: "texto", x: xb + 2, y: 5, texto: tareas[Math.min(2, Math.floor(v / 34))] });
+        }
+        if (p.consejo) els.push({ tipo: "texto", x: Math.max(1, Math.floor((W - letras(p.consejo).length) / 2) + 1), y: 8, texto: p.consejo, color: "gris" });
+        const kw = [["estilo", p.estilo === "suave" ? null : p.estilo], ["color", p.color === "cian" ? null : p.color],
+          ["color_final", p.color_final || null], ["consejos", p.consejo ? { crudo: "[" + py(p.consejo) + "]" } : null]];
+        // si no cabe en una línea, un argumento por línea
+        const partir = c => c.length <= 72 ? c : c.replace(/, (?=[a-z_]+=)/g, ",\n" + " ".repeat(c.indexOf("(") + 1));
+        let codigo;
+        if (p.forma === "tareas") {
+          codigo = "def leer_mapa():\n    ...           # lo que tarda de verdad\n\n" +
+            "# un texto es un paso de mentira; una función se llama de verdad\n" +
+            'tareas = [("Leyendo el mapa", leer_mapa), "Colocando enemigos", "Afinando los sonidos"]\n' +
+            partir(llamada("pantalla_de_carga", [titulo], [["tareas", { crudo: "tareas" }]].concat(sinTotal ? [["total", { crudo: "None" }]] : []).concat(kw)));
+        } else if (p.forma === "with") {
+          codigo = "archivos = [\"mapa_1.dat\", \"mapa_2.dat\", \"mapa_3.dat\"]\n" +
+            partir("with " + llamada("pantalla_de_carga", [titulo], [["total", { crudo: sinTotal ? "None" : "len(archivos)" }]].concat(kw)) + " as carga:") + "\n" +
+            "    for archivo in archivos:\n        carga.avanzar(texto=archivo)\n        leer(archivo)";
+        } else {
+          codigo = partir(llamada("pantalla_de_carga", [titulo], [["segundos", 3]].concat(sinTotal ? [["total", { crudo: "None" }]] : []).concat(kw)));
+        }
+        return { elementos: els, ancho: W, codigo,
+          res: acabado ? res("al acabar", "✔ Listo, y se borra sola") : pista(sinTotal ? "Con total=None la barra va y viene: para cuando no sabes cuánto falta" : "Prueba otro «estilo» u otra «forma»") };
       },
     },
     escribir_lento: {
@@ -5430,7 +5593,7 @@ const Inicio = (() => {
     fs = Math.max(8, Math.min(18, fs));
   }
   function elementos() {
-    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.3" }];
+    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.4" }];
     const menuEl = { tipo: "menu", opciones: OPCIONES, titulo: "¿Qué quieres hacer?", ayudas: OPCIONES.map(o => AYUDA[o]), color: "cian" };
     const g = menuGeom(menuEl);
     let fuente = null, titulo = null;
@@ -5481,7 +5644,7 @@ const Inicio = (() => {
     try { reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     if (reducido) { fase = "menu"; dibujar(); return; }
     fase = "arranque";
-    tipeo = { lineas: ["Python 3 · pantalla 0.3 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
+    tipeo = { lineas: ["Python 3 · pantalla 0.4 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
     tipeo.lineas[0] = tipeo.lineas[0].slice(0, cols);
     tipeo.letra = tipeo.lineas[0].length;
     dibujarArranque();
@@ -5588,7 +5751,7 @@ const Inicio = (() => {
     l.push("AYUDA = {");
     OPCIONES.forEach(o => l.push(`    ${py(o)}: ${py(AYUDA[o])},`));
     l.push("}", "", "pantalla.limpiar()");
-    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.3"]]));
+    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.4"]]));
     if (g.fuente) l.push(llamada("grande", ["pantalla"], [["y", g.yTitulo], ["fuente", g.fuente === "bloques" ? null : g.fuente], ["color", "amarillo"]]));
     l.push(llamada("centrar", [g.sub], [["y", g.ySub], ["color", "gris claro"]]));
     l.push(llamada("centrar", [g.pie], [["y", g.yPie], ["color", "gris"]]));

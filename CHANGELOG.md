@@ -9,8 +9,12 @@
 - Números: `mcd()`, `mcm()`, `es_primo()`, `divisores()`, `factorizar()` y `descomponer()`.
 - Gráficas: `grafica()` para funciones (una o varias), `barras()` y `minigrafica()`.
 - `elegir_varios()` para marcar varias opciones y `formulario()` para pedir varias cosas a la vez.
-- La demo (`python -m pantalla`) tiene apartados de fracciones y gráficas, y la de matrices hace más cosas.
-- Ejemplos nuevos: 13 a 16.
+- `barra_progreso()` con `estilo=` (bloques, suave, linea, ascii, puntos, cuadros, circulos, rombos, flechas y rayas), `color_final=` para que cambie de color y `texto=` delante. `lista_barras()` dice cuáles hay.
+- `pantalla_de_carga()`: título (también en letras grandes), barra, el paso que se está haciendo y consejos. Vale de mentira con `segundos=`, con una lista de `tareas` o con `with` para moverla tú. Con `total=None` la barra va y viene.
+- En `pantalla.ayuda()` las barras, las cargas y los spinners tienen su propio apartado.
+- La demo (`python -m pantalla`) tiene apartados de fracciones, gráficas y pantallas de carga, y la de matrices hace más cosas.
+- En el constructor web las barras tienen estilo y color final.
+- Ejemplos nuevos: 13 a 17.
 
 ## 0.3.1
 

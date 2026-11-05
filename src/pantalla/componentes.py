@@ -359,24 +359,165 @@ def mensaje(texto, titulo="Aviso", color=None, color_borde="cian", estilo="doble
     return None
 
 
+# estilo: (lleno, vacío). los que no tienen letras se pintan aparte
+ESTILOS_BARRA = {
+    "bloques": ("█", "░"),
+    "suave": None,
+    "linea": None,
+    "ascii": None,
+    "puntos": ("⣿", "⣀"),
+    "cuadros": ("■", "□"),
+    "circulos": ("●", "○"),
+    "rombos": ("◆", "◇"),
+    "flechas": ("▰", "▱"),
+    "rayas": ("▮", "▯"),
+}
+_OCTAVOS = "▏▎▍▌▋▊▉"
+_FONDO_VACIO = 236
+
+
+def lista_barras():
+    """Devuelve los nombres de los estilos de barra_progreso() y pantalla_de_carga().
+
+        for estilo in pantalla.lista_barras():
+            print(estilo)
+    """
+    return list(ESTILOS_BARRA)
+
+
+def _estilo_barra(estilo, funcion):
+    from .colores import _normalizar
+    if not isinstance(estilo, str):
+        raise TypeError("%s: el estilo es un nombre, como \"suave\" o \"ascii\". Me has dado %r"
+                        % (funcion, estilo))
+    nombre = _normalizar(estilo)
+    nombre = {"linea": "linea", "circulo": "circulos", "cuadro": "cuadros", "punto": "puntos",
+              "rombo": "rombos", "flecha": "flechas", "raya": "rayas", "bloque": "bloques"}.get(nombre, nombre)
+    if nombre not in ESTILOS_BARRA:
+        import difflib
+        parecido = difflib.get_close_matches(nombre, list(ESTILOS_BARRA), n=1)
+        mensaje = "%s: no conozco el estilo de barra %r." % (funcion, estilo)
+        if parecido:
+            mensaje += " ¿Querías decir %r?" % parecido[0]
+        raise ValueError(mensaje + " Hay estos: " + ", ".join(ESTILOS_BARRA))
+    return nombre
+
+
+def _colores_barra(color, color_final, ancho):
+    """Un código de color para cada casilla (si hay color_final, va cambiando poco a poco)."""
+    if color_final is None:
+        return [_estilo_ansi(color)] * ancho
+    from .colores import _mezclar, _rgb
+    a, b = _rgb(color), _rgb(color_final)
+    if a is None or b is None:
+        raise ValueError("color_final: para mezclar colores usa nombres, '#rrggbb' o (r, g, b), no números")
+    return [_estilo_ansi(_mezclar(a, b, i / float(max(1, ancho - 1)))) for i in range(ancho)]
+
+
+def _pintar_barra(fraccion, ancho, estilo="bloques", color="verde", color_final=None, lleno=None,
+                  vacio=None, funcion="barra_progreso", trozo=None):
+    """Devuelve la barra ya con colores. trozo=(desde, largo) pinta solo un trozo lleno (para la que rebota)."""
+    estilo = _estilo_barra(estilo, funcion)
+    fin = _fin_de_estilo()
+    gris = _estilo_ansi("gris")
+    cods = _colores_barra(color, color_final, ancho)
+    if trozo is None:
+        llenas = set(range(int(round(fraccion * ancho))))
+    else:
+        llenas = set(range(trozo[0], trozo[0] + trozo[1]))
+    if lleno is not None or vacio is not None:
+        if ESTILOS_BARRA[estilo] is None:
+            estilo = "bloques"
+        lleno = ESTILOS_BARRA[estilo][0] if lleno is None else str(lleno)
+        vacio = ESTILOS_BARRA[estilo][1] if vacio is None else str(vacio)
+    if estilo == "ascii" and lleno is None:
+        dentro = ancho - 2
+        if dentro < 1:
+            raise ValueError("%s: con el estilo \"ascii\" el ancho tiene que ser 3 o más" % funcion)
+        if trozo is None:
+            n = int(round(fraccion * dentro))
+            letras = "=" * n if n >= dentro else ("=" * max(0, n - 1) + (">" if n else "")).ljust(dentro)
+        else:
+            desde = min(trozo[0], max(0, dentro - trozo[1]))
+            letras = "".join("=" if desde <= i < desde + trozo[1] else " " for i in range(dentro))
+        return gris + "[" + fin + cods[0] + letras + fin + gris + "]" + fin
+    casillas = []
+    if estilo == "suave" and lleno is None:
+        fondo = _estilo_ansi(fondo=_FONDO_VACIO)
+        octavos = int(round(fraccion * ancho * 8)) if trozo is None else None
+        for i in range(ancho):
+            if trozo is not None:
+                casillas.append((cods[i], "█") if i in llenas else (fondo, " "))
+            elif octavos >= (i + 1) * 8:
+                casillas.append((cods[i], "█"))
+            elif octavos > i * 8:
+                casillas.append((_mezcla_fondo(cods[i]), _OCTAVOS[octavos - i * 8 - 1]))
+            else:
+                casillas.append((fondo, " "))
+    elif estilo == "linea" and lleno is None:
+        medios = int(round(fraccion * ancho * 2)) if trozo is None else None
+        for i in range(ancho):
+            if trozo is not None:
+                casillas.append((cods[i] if i in llenas else gris, "━"))
+            elif medios >= (i + 1) * 2:
+                casillas.append((cods[i], "━"))
+            elif medios > i * 2:
+                casillas.append((cods[i], "╸"))
+            else:
+                casillas.append((gris, "━"))
+    else:
+        if lleno is None:
+            lleno, vacio = ESTILOS_BARRA[estilo]
+        for i in range(ancho):
+            casillas.append((cods[i], lleno) if i in llenas else (gris, vacio))
+    # junta las casillas seguidas del mismo color
+    texto, anterior = "", None
+    for cod, letra in casillas:
+        if cod != anterior:
+            texto += (fin if anterior else "") + cod
+            anterior = cod
+        texto += letra
+    return texto + (fin if anterior else "")
+
+
+def _mezcla_fondo(codigo):
+    # el color de la barra por delante y el gris oscuro por detrás, en un solo código
+    fondo = _estilo_ansi(fondo=_FONDO_VACIO)
+    if not codigo:
+        return fondo
+    return codigo[:-1] + ";" + fondo[2:]
+
+
 def barra_progreso(valor, total=100, x=None, y=None, ancho=30, color="verde",
-                   porcentaje=True, lleno="█", vacio="░"):
+                   porcentaje=True, lleno=None, vacio=None, estilo="bloques", color_final=None,
+                   texto=None):
     """Dibuja una barra de progreso. Llámala otra vez con otro valor para que avance.
 
         for i in range(101):
             pantalla.barra_progreso(i, 100, 10, 5)
             pantalla.pausa(0.02)
 
+        pantalla.barra_progreso(40, 100, 10, 5, estilo="suave", color="cian")
+        pantalla.barra_progreso(vida, 100, 2, 1, color="rojo", color_final="verde", texto="Vida")
+
+    - estilo: "bloques" ███░░░, "suave" (avanza de octavo en octavo), "linea" ━━━╺──,
+      "ascii" [===>  ], "puntos" ⣿⣿⣀⣀, "cuadros" ■■□□, "circulos" ●●○○, "rombos" ◆◆◇◇,
+      "flechas" ▰▰▱▱ y "rayas" ▮▮▯▯. Están todos en pantalla.lista_barras().
+    - color_final: la barra va cambiando de color hasta este (de rojo a verde, por ejemplo).
+    - lleno, vacio: tus propios caracteres (mandan sobre los del estilo).
+    - texto: un nombre que se escribe delante de la barra.
     Sin x ni y, la dibuja en la línea donde esté el cursor (y la va sobrescribiendo).
     """
     ancho = _entero(ancho, "ancho", "barra_progreso")
+    if ancho < 1:
+        raise ValueError("barra_progreso: el ancho tiene que ser 1 o más")
     if total == 0:
         fraccion = 1.0
     else:
         fraccion = max(0.0, min(1.0, float(valor) / float(total)))
-    llenos = int(round(fraccion * ancho))
-    codigo = _estilo_ansi(color)
-    barra = codigo + lleno * llenos + _fin_de_estilo() + _estilo_ansi("gris") + vacio * (ancho - llenos) + _fin_de_estilo()
+    barra = _pintar_barra(fraccion, ancho, estilo, color, color_final, lleno, vacio)
+    if texto is not None:
+        barra = str(texto) + " " + barra
     if porcentaje:
         barra = barra + " %3d%%" % int(round(fraccion * 100))
     if x is None and y is None:

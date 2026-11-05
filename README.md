@@ -19,7 +19,7 @@
 
 <br>
 
-**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, spinners para tareas largas y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
+**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, barras, spinners y pantallas de carga para las tareas largas, y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
 
 <table>
 <tr>
@@ -82,25 +82,6 @@ En cualquier terminal de verdad: **cmd**, **PowerShell**, **Windows Terminal**, 
 
 **IDLE** no es una terminal. En Windows, si pulsas F5 en IDLE, pantalla abre tu programa en una ventana de cmd y lo ejecuta allí (si no quieres que lo haga, pon la variable de entorno `PANTALLA_NO_ABRIR=1`). En Linux y Mac, ejecútalo desde la terminal. En **Thonny**, usa *Ejecutar → Ejecutar el script actual en terminal*.
 
-## Si algo falla
-
-Los errores te dicen en español qué ha pasado y cómo arreglarlo:
-
-```
->>> pantalla.escribe("hola")
-AttributeError: pantalla no tiene ninguna función que se llame 'escribe'. ¿Querías decir pantalla.escribir...?
-
->>> pantalla.escribir(5, 3, "hola")
-TypeError: escribir: 'y' tiene que ser un número, pero me has dado 'hola'. ¿Has puesto el texto al final? ...
-
->>> pantalla.gotoxy("5", 3)
-TypeError: gotoxy: 'x' tiene que ser un número, pero me has dado '5'. Es un número entre comillas...
-```
-
-- Puedes escribir los nombres con tildes y ñ: `pantalla.tamaño()`, `pantalla.diseño()`, `pantalla.pedir_contraseña()`.
-- Al comparar teclas no importan las mayúsculas ni el nombre: `tecla == "Intro"`, `tecla == "ENTER"` y `tecla == "enter"` valen igual, y `tecla == " "` es el espacio.
-- Si en un juego se te olvida `global`, el error te dice qué línea tienes que poner.
-
 ## Cómo funcionan las posiciones
 
 La pantalla es una cuadrícula de letras. `x` es la columna (hacia la derecha) e `y` la fila (hacia abajo). **Las dos empiezan en 1**: la esquina de arriba a la izquierda es `(1, 1)`.
@@ -120,6 +101,10 @@ La pantalla es una cuadrícula de letras. `x` es la columna (hacia la derecha) e
 **¿No sabes en qué posición está algo?** Escribe en la terminal `python -m pantalla depurar`: sale una cruz que mueves con las flechas y te dice su `x` y su `y` (y el `gotoxy` que tienes que escribir). Dentro de tu programa, `pantalla.regla()` pinta los números de las columnas y las filas en los bordes.
 
 ## Todo lo que hay
+
+[Pantalla y cursor](https://github.com/phernandez102/pantalla#pantalla-y-cursor) · [Escribir](https://github.com/phernandez102/pantalla#escribir) · [Colores](https://github.com/phernandez102/pantalla#colores) · [Dibujar](https://github.com/phernandez102/pantalla#dibujar) · [Teclado](https://github.com/phernandez102/pantalla#teclado) · [Cosas ya hechas](https://github.com/phernandez102/pantalla#cosas-ya-hechas) · [Barras y pantallas de carga](https://github.com/phernandez102/pantalla#barras-y-pantallas-de-carga) · [Ratón](https://github.com/phernandez102/pantalla#ratón) · [Matrices](https://github.com/phernandez102/pantalla#matrices) · [Fracciones y números](https://github.com/phernandez102/pantalla#fracciones-y-números) · [Gráficas](https://github.com/phernandez102/pantalla#gráficas)
+
+`pantalla.ayuda()` abre un menú con todas, y si escribes mal un nombre el error te dice cuál querías.
 
 ### Pantalla y cursor
 
@@ -292,39 +277,14 @@ dificultad = pantalla.elegir("Dificultad:", ["Fácil", "Normal", "Difícil"])   
 
 pantalla.tabla([["Ana", 8.5], ["Luis", 6]], cabeceras=["Nombre", "Nota"])
 
-for i in range(101):
-    pantalla.barra_progreso(i, 100, 10, 5)
-    pantalla.pausa(0.02)
-
-pantalla.cargando(3, "Guardando partida")    # "Cargando..." en la línea donde estés
-pantalla.calculando()                        # ventanita de "Calculando..." en el centro
-
 juegos = pantalla.elegir_varios(["Ajedrez", "Damas", "Parchís"], titulo="¿A qué juegas?")   # se marcan con Espacio
 datos = pantalla.formulario({"Nombre": "texto", "Edad": "numero", "Contraseña": "contraseña"})
 print(datos["Nombre"], datos["Edad"])
 ```
 
-`elegir_varios()` devuelve la lista de lo que has marcado y `formulario()` un diccionario con lo que has escrito en cada casilla (los dos `None` si pulsas Esc). En el formulario cada casilla puede ser `"texto"`, `"numero"`, `"decimal"`, `"fraccion"` o `"contraseña"`.
-
-#### Spinners (la ruedecita que gira mientras trabajas)
-
-Como la librería [halo](https://github.com/manrajgrover/halo): gira sola mientras tu programa sigue.
-
-```python
-with pantalla.spinner("Descargando..."):       # al acabar pone ✔ (o ✖ si hay un error)
-    descargar_todo()
-
-s = pantalla.spinner("Paso 1", estilo="arco", color="amarillo").empezar()
-s.texto = "Paso 2"                             # cambia el texto mientras gira
-s.bien("Hecho")                                # ✔ Hecho   (también mal(), aviso(), info(), parar())
-
-pantalla.spinner("Guardando", x=10, y=5)       # en un sitio fijo de la pantalla
-pantalla.lista_spinners()                      # los ~60 estilos: "dots", "line", "arc", "pelota", "tiburon"...
-```
-
-Sin terminal de verdad (IDLE) no gira: escribe el texto una vez y luego el final.
-
-`menu()` devuelve el texto de la opción elegida (o `None` si pulsas Esc). También se puede elegir pulsando el número. Si hay más opciones de las que caben, el menú hace scroll.
+- `menu()` devuelve el texto de la opción elegida (o `None` si pulsas Esc). También se puede elegir pulsando el número. Si hay más opciones de las que caben, el menú hace scroll.
+- `elegir_varios()` devuelve la lista de lo que has marcado y `formulario()` un diccionario con lo que has escrito en cada casilla (los dos `None` si pulsas Esc).
+- En el formulario cada casilla puede ser `"texto"`, `"numero"`, `"decimal"`, `"fraccion"` o `"contraseña"`.
 
 #### Menús con ayuda, iconos y secciones
 
@@ -349,6 +309,111 @@ opcion = pantalla.menu({
     "Determinantes": ["Determinante", "Inversa"],
     "Otros": ["Historial", "Ajustes", "Salir"],
 }, ayudas={"Sumar": "Suma dos matrices del mismo tamaño"})
+```
+
+### Barras y pantallas de carga
+
+<table>
+<tr>
+<td valign="top" width="42%"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/barras.svg" alt="Los diez estilos de barra_progreso() y una barra con color_final"></td>
+<td valign="top" width="58%"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/carga.svg" alt="Una pantalla de carga con el título en letras grandes, la barra, el paso que está haciendo y un consejo"></td>
+</tr>
+<tr>
+<td align="center"><sub><code>barra_progreso(estilo=...)</code></sub></td>
+<td align="center"><sub><code>pantalla_de_carga()</code></sub></td>
+</tr>
+</table>
+
+`barra_progreso()` dibuja una barra en un sitio. Para que avance, la vuelves a llamar con otro valor:
+
+```python
+for i in range(101):
+    pantalla.barra_progreso(i, 100, 10, 5)        # valor, total, columna, fila
+    pantalla.pausa(0.02)
+
+pantalla.barra_progreso(40, 100, 10, 7, estilo="suave", color="cian")
+pantalla.barra_progreso(vida, 100, 2, 1, color="rojo", color_final="verde", texto="Vida")
+```
+
+Los estilos son los de la imagen: `"bloques"` (el normal), `"suave"`, `"linea"`, `"ascii"`, `"puntos"`, `"cuadros"`, `"circulos"`, `"rombos"`, `"flechas"` y `"rayas"`. Dos detalles:
+
+- `"suave"` avanza de octavo en octavo de casilla, así que se mueve sin saltos aunque la barra sea corta.
+- `"ascii"` (`[=====>    ]`) solo usa letras normales: sale bien en cualquier terminal, también en las antiguas.
+
+Y más opciones:
+
+- `color_final=`: la barra va cambiando de `color` a este, casilla a casilla. Vale con nombres, `"#rrggbb"` o `(r, g, b)`.
+- `lleno=` y `vacio=`: tus propios caracteres, que mandan sobre los del estilo.
+- `texto=`: un nombre delante de la barra. `porcentaje=False` quita el número.
+- Sin x ni y, la barra sale donde esté el cursor, y cada llamada la sobrescribe en la misma línea.
+- `pantalla.lista_barras()` te da todos los estilos.
+
+#### Pantallas de carga
+
+`pantalla_de_carga()` limpia la terminal y pone en el centro un título, la barra, lo que se está haciendo y, si quieres, consejos que van cambiando. Al acabar enseña ✔ Listo y la borra. Hay tres formas de usarla, de la más fácil a la más completa:
+
+```python
+# 1. de mentira: tarda 3 segundos y se va (queda bien antes de empezar un juego)
+pantalla.pantalla_de_carga("Cargando nivel 1", segundos=3)
+
+# 2. con tareas: un texto es un paso de mentira y una función se llama de verdad
+mapa, enemigos = pantalla.pantalla_de_carga("Preparando", tareas=[
+    ("Leyendo el mapa", leer_mapa),
+    ("Colocando enemigos", colocar_enemigos),
+    "Afinando los sonidos",
+])
+
+# 3. tú mueves la barra, con with
+with pantalla.pantalla_de_carga("Descargando", total=len(archivos)) as carga:
+    for archivo in archivos:
+        carga.avanzar(texto=archivo)       # suma 1 y cambia el texto de debajo
+        descargar(archivo)
+```
+
+Con tareas devuelve lo que devuelvan tus funciones, en el mismo orden. Con `with`, además de `avanzar()` puedes poner `carga.valor = 7` o `carga.texto = "Casi está"`.
+
+Para dejarla a tu gusto:
+
+```python
+pantalla.pantalla_de_carga(
+    "NIVEL 2", segundos=4,
+    fuente="ansi_shadow",                    # el título en letras grandes
+    estilo="suave", color="cian", color_final="morado claro",
+    consejos=["Consejo: los asteroides grandes se parten en dos", "Pulsa P para pausar"],
+    marco="redondo",                         # un borde alrededor
+)
+```
+
+- `total=None`: para cuando no sabes cuánto falta. Un trozo de barra va y viene.
+- `spinner=`: la ruedecita de al lado del texto. Vale cualquier estilo de `lista_spinners()`, o `None` para quitarla.
+- `borrar=False`: la deja en la pantalla al acabar.
+- Los consejos cambian cada 4 segundos. Si las letras grandes no caben en la terminal, pone el título normal.
+- La animación va en un hilo aparte, así que sigue moviéndose aunque tu función tarde. Úsala antes de `jugar()`, no dentro: dentro de un juego, dibuja una `barra_progreso()` en cada fotograma.
+- En IDLE, sin terminal de verdad, escribe los pasos uno debajo de otro.
+
+#### Spinners (la ruedecita que gira mientras trabajas)
+
+Como la librería [halo](https://github.com/manrajgrover/halo): gira sola mientras tu programa sigue.
+
+```python
+with pantalla.spinner("Descargando..."):       # al acabar pone ✔ (o ✖ si hay un error)
+    descargar_todo()
+
+s = pantalla.spinner("Paso 1", estilo="arco", color="amarillo").empezar()
+s.texto = "Paso 2"                             # cambia el texto mientras gira
+s.bien("Hecho")                                # ✔ Hecho   (también mal(), aviso(), info(), parar())
+
+pantalla.spinner("Guardando", x=10, y=5)       # en un sitio fijo de la pantalla
+pantalla.lista_spinners()                      # los ~60 estilos: "dots", "line", "arc", "pelota", "tiburon"...
+```
+
+Sin terminal de verdad (IDLE) no gira: escribe el texto una vez y luego el final.
+
+Y dos más sencillas, que esperan un rato y siguen:
+
+```python
+pantalla.cargando(3, "Guardando partida")    # "Cargando..." en la línea donde estés, durante 3 segundos
+pantalla.calculando()                        # ventanita de "Calculando..." en el centro
 ```
 
 ### Ratón
@@ -414,7 +479,7 @@ pantalla.escalonar(A, reducida=True)              # Gauss-Jordan
 #  x - y = 1
 pantalla.resolver_sistema([[2, 1], [1, -1]], [5, 1], pasos=True)   # Solución: x = 2,  y = 1
 pantalla.clasificar_sistema([[1, 1], [2, 2]], [3, 6])              # "compatible indeterminado"
-pantalla.matriz(Ab, ampliada=True)                                 # con la raya antes de la última columna
+pantalla.matriz([[2, 1, 5], [1, -1, 1]], ampliada=True)           # con la raya antes de la última columna
 ```
 
 `resolver_sistema()` devuelve la lista con las soluciones, o `None` si el sistema no tiene una sola solución (con `pasos=True` te dice si es porque no tiene ninguna o porque tiene infinitas). En vez de `b` le puedes dar directamente la matriz ampliada.
@@ -574,6 +639,26 @@ En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil a
 14. `14_sistemas.py`: resolver un sistema de ecuaciones por Gauss, paso a paso
 15. `15_graficas.py`: dibujar funciones y gráficas de barras
 16. `16_formulario.py`: un formulario y una lista para marcar varias cosas
+17. `17_pantalla_de_carga.py`: una pantalla de carga que prepara un mapa de verdad antes de enseñarlo
+
+## Si algo falla
+
+Los errores te dicen en español qué ha pasado y cómo arreglarlo:
+
+```
+>>> pantalla.escribe("hola")
+AttributeError: pantalla no tiene ninguna función que se llame 'escribe'. ¿Querías decir pantalla.escribir...?
+
+>>> pantalla.escribir(5, 3, "hola")
+TypeError: escribir: 'y' tiene que ser un número, pero me has dado 'hola'. ¿Has puesto el texto al final? ...
+
+>>> pantalla.gotoxy("5", 3)
+TypeError: gotoxy: 'x' tiene que ser un número, pero me has dado '5'. Es un número entre comillas...
+```
+
+- Puedes escribir los nombres con tildes y ñ: `pantalla.tamaño()`, `pantalla.diseño()`, `pantalla.pedir_contraseña()`.
+- Al comparar teclas no importan las mayúsculas ni el nombre: `tecla == "Intro"`, `tecla == "ENTER"` y `tecla == "enter"` valen igual, y `tecla == " "` es el espacio.
+- Si en un juego se te olvida `global`, el error te dice qué línea tienes que poner.
 
 ## ¿Cómo funciona por dentro?
 

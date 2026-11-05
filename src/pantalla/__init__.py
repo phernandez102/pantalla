@@ -18,8 +18,9 @@ Escribe pantalla.ayuda() para ver todo lo que se puede hacer.
 
 from .arte import CODIGOS_COLOR, arte
 from .colores import colorear, lista_colores, poner_color, quitar_color
+from .cargas import PantallaDeCarga, pantalla_de_carga
 from .componentes import (barra_progreso, cabecera, calculando, cargando, elegir, elegir_varios,
-                          formulario, mensaje, menu, pie, tabla)
+                          formulario, lista_barras, mensaje, menu, pie, tabla)
 from .dibujo import ESTILOS, caja, linea, linea_vertical, punto, rellenar, rodear
 from .disenos import diseno
 from .graficas import barras, grafica, minigrafica
@@ -60,8 +61,9 @@ _GRUPOS = [
     ("Dibujar", ["rodear", "caja", "linea", "linea_vertical", "rellenar", "punto", "arte"]),
     ("Teclado", ["tecla", "tecla_pulsada", "vaciar_teclado", "esperar", "pedir",
                  "pedir_numero", "pedir_contrasena", "confirmar"]),
-    ("Cosas ya hechas", ["menu", "elegir", "elegir_varios", "formulario", "mensaje", "tabla",
-                         "barra_progreso", "cargando", "calculando", "spinner", "lista_spinners"]),
+    ("Cosas ya hechas", ["menu", "elegir", "elegir_varios", "formulario", "mensaje", "tabla"]),
+    ("Barras y pantallas de carga", ["barra_progreso", "lista_barras", "pantalla_de_carga", "cargando",
+                                     "calculando", "spinner", "lista_spinners"]),
     ("Juegos", ["jugar", "Sprite", "sprites", "cada", "fotograma", "pulsada"]),
     ("Matrices", ["matriz", "pedir_matriz", "sumar_matrices", "restar_matrices", "multiplicar_matrices",
                   "transpuesta", "identidad", "traza", "determinante", "inversa", "rango",
@@ -74,7 +76,7 @@ _GRUPOS = [
     ("Diseñar y ver posiciones", ["diseno", "regla", "depurar"]),
 ]
 
-__all__ = [nombre for _, nombres in _GRUPOS for nombre in nombres] + ["ayuda", "Spinner", "Fraccion", "ESTILOS",
+__all__ = [nombre for _, nombres in _GRUPOS for nombre in nombres] + ["ayuda", "Spinner", "PantallaDeCarga", "Fraccion", "ESTILOS",
                                                                      "CODIGOS_COLOR"]
 
 
@@ -100,6 +102,9 @@ _PARECIDAS = {
     "barra_grafica": "barras", "histograma": "barras", "sparkline": "minigrafica",
     "checkbox": "elegir_varios", "marcar": "elegir_varios", "casillas": "elegir_varios",
     "formularios": "formulario", "pedir_datos": "formulario", "pedir_varios": "formulario",
+    "loading": "pantalla_de_carga", "pantalla_carga": "pantalla_de_carga", "carga": "pantalla_de_carga",
+    "loading_screen": "pantalla_de_carga", "cargar": "pantalla_de_carga", "estilos_barra": "lista_barras",
+    "barras_progreso": "lista_barras", "progress": "barra_progreso", "progressbar": "barra_progreso",
 }
 
 
