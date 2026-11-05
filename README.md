@@ -19,7 +19,7 @@
 
 <br>
 
-**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, spinners para tareas largas y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Todo en español.
+**pantalla** convierte la terminal en un lienzo para aprender Python. Con una línea pones texto donde quieras y con colores, dibujas cajas y menús, escribes títulos con 32 fuentes ASCII o conviertes una imagen en arte de caracteres. Tiene botones que responden al ratón, spinners para tareas largas y un modo juego: escribes qué pasa en cada momento y la librería se encarga del resto, sin parpadeos y sin bucles infinitos. Y para clase de mates trae matrices, fracciones exactas, sistemas por Gauss paso a paso y gráficas de funciones. Todo en español.
 
 <table>
 <tr>
@@ -298,7 +298,13 @@ for i in range(101):
 
 pantalla.cargando(3, "Guardando partida")    # "Cargando..." en la línea donde estés
 pantalla.calculando()                        # ventanita de "Calculando..." en el centro
+
+juegos = pantalla.elegir_varios(["Ajedrez", "Damas", "Parchís"], titulo="¿A qué juegas?")   # se marcan con Espacio
+datos = pantalla.formulario({"Nombre": "texto", "Edad": "numero", "Contraseña": "contraseña"})
+print(datos["Nombre"], datos["Edad"])
 ```
+
+`elegir_varios()` devuelve la lista de lo que has marcado y `formulario()` un diccionario con lo que has escrito en cada casilla (los dos `None` si pulsas Esc). En el formulario cada casilla puede ser `"texto"`, `"numero"`, `"decimal"`, `"fraccion"` o `"contraseña"`.
 
 #### Spinners (la ruedecita que gira mientras trabajas)
 
@@ -379,6 +385,83 @@ pantalla.matriz(A, 5, 3, det=True)          # con barras, como un determinante
 ```
 
 `pedir_matriz()` acepta enteros, decimales (`2.5` o `2,5`) y fracciones (`1/2`). Devuelve una lista de filas, por ejemplo `[[1, 2], [3, 4]]`. Con `fracciones=True` devuelve `Fraction` en vez de decimales.
+
+Las cuentas se hacen con fracciones exactas, así que la inversa sale `1/3` y no `0.3333333`:
+
+```python
+A = [[2, 1], [1, -1]]
+
+pantalla.sumar_matrices(A, B)       # también restar_matrices()
+pantalla.multiplicar_matrices(A, B) # o un número por una matriz: multiplicar_matrices(2, A)
+pantalla.transpuesta(A)
+pantalla.potencia_matriz(A, 3)      # A·A·A
+pantalla.identidad(3)
+pantalla.traza(A)                   # 1
+pantalla.determinante(A)            # -3
+pantalla.inversa(A)                 # [[1/3, 1/3], [1/3, -2/3]]
+pantalla.rango(A)                   # 2
+```
+
+Si la matriz no tiene inversa, el error te dice por qué: `inversa: esta matriz no tiene inversa porque su determinante es 0`.
+
+#### Gauss y sistemas de ecuaciones
+
+```python
+pantalla.escalonar(A, pasos=True)                 # enseña cada paso: F2 → F2 - 2·F1
+pantalla.escalonar(A, reducida=True)              # Gauss-Jordan
+
+# 2x + y = 5
+#  x - y = 1
+pantalla.resolver_sistema([[2, 1], [1, -1]], [5, 1], pasos=True)   # Solución: x = 2,  y = 1
+pantalla.clasificar_sistema([[1, 1], [2, 2]], [3, 6])              # "compatible indeterminado"
+pantalla.matriz(Ab, ampliada=True)                                 # con la raya antes de la última columna
+```
+
+`resolver_sistema()` devuelve la lista con las soluciones, o `None` si el sistema no tiene una sola solución (con `pasos=True` te dice si es porque no tiene ninguna o porque tiene infinitas). En vez de `b` le puedes dar directamente la matriz ampliada.
+
+### Fracciones y números
+
+<p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/mates.svg" alt="Cuentas con fracciones, una matriz con su inversa y la descomposición de 360" width="640"></p>
+
+```python
+f = pantalla.fraccion("3/4")                       # también fraccion(3, 4) o fraccion("0,75")
+print(f + pantalla.fraccion("1/6"))                # 11/12
+f = pantalla.pedir_fraccion("Dime una fracción: ")  # insiste hasta que lo sea
+
+pantalla.calcular("3/4 + 1/6")                     # 11/12, también valen ÷, : y ^
+pantalla.escribir_cuenta("1/2 + 1/3", 5, 3)        # la dibuja como en el cuaderno, con el resultado
+```
+
+Y para trabajar con enteros:
+
+```python
+pantalla.mcd(12, 18)        # 6
+pantalla.mcm(4, 6)          # 12
+pantalla.es_primo(97)       # True
+pantalla.divisores(12)      # [1, 2, 3, 4, 6, 12]
+pantalla.factorizar(360)    # {2: 3, 3: 2, 5: 1}
+pantalla.descomponer(360)   # la tabla de dividir entre primos y 360 = 2³ · 3² · 5
+```
+
+### Gráficas
+
+<p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/graficas.svg" alt="Seno y coseno, una gráfica de barras y una minigráfica" width="720"></p>
+
+```python
+import math
+
+def f(x):
+    return x * x - 4
+
+pantalla.grafica(f, -4, 4)                                 # y = x² - 4, de x = -4 a x = 4
+pantalla.grafica([math.sin, math.cos], -6.3, 6.3)          # varias a la vez, cada una de un color
+pantalla.grafica(f, -4, 4, 10, 3, ancho=40, alto=12)       # en la columna 10, fila 3
+
+pantalla.barras({"Ana": 8.5, "Luis": 6, "Marta": 9.75}, maximo=10)
+print("Esta semana:", pantalla.minigrafica([3, 1, 4, 1, 5, 9, 2, 6]))   # ▃▁▄▁▅█▂▅
+```
+
+Si la función falla en algún punto (como `1/x` en el 0), ese punto se deja en blanco y sigue.
 
 ## Hacer un juego
 
@@ -487,6 +570,10 @@ En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil a
 10. `10_space_invaders.py`: un Space Invaders con `jugar()` y `Sprite`, sin ningún `while`
 11. `11_spinners.py`: spinners que giran mientras el programa trabaja
 12. `12_pelota.py`: el juego más pequeño posible, una pelota que rebota
+13. `13_fracciones.py`: pedir dos fracciones y hacer la cuenta como en el cuaderno
+14. `14_sistemas.py`: resolver un sistema de ecuaciones por Gauss, paso a paso
+15. `15_graficas.py`: dibujar funciones y gráficas de barras
+16. `16_formulario.py`: un formulario y una lista para marcar varias cosas
 
 ## ¿Cómo funciona por dentro?
 

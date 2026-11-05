@@ -18,16 +18,21 @@ Escribe pantalla.ayuda() para ver todo lo que se puede hacer.
 
 from .arte import CODIGOS_COLOR, arte
 from .colores import colorear, lista_colores, poner_color, quitar_color
-from .componentes import (barra_progreso, cabecera, calculando, cargando, elegir, mensaje, menu, pie,
-                          tabla)
+from .componentes import (barra_progreso, cabecera, calculando, cargando, elegir, elegir_varios,
+                          formulario, mensaje, menu, pie, tabla)
 from .dibujo import ESTILOS, caja, linea, linea_vertical, punto, rellenar, rodear
 from .disenos import diseno
+from .graficas import barras, grafica, minigrafica
 from .herramientas import depurar, regla
 from .juego import Sprite, cada, fotograma, jugar, pulsada, sprites
 from .letras import grande, lista_fuentes, texto_grande
 from .raton import (activar_raton, boton, botones, bucle, desactivar_raton, esperar_clic,
                     leer_raton, posicion_raton, zona)
-from .matrices import matriz, pedir_matriz
+from .matrices import (clasificar_sistema, determinante, escalonar, identidad, inversa, matriz,
+                       multiplicar_matrices, pedir_matriz, potencia_matriz, rango, resolver_sistema,
+                       restar_matrices, sumar_matrices, transpuesta, traza)
+from .numeros import (Fraccion, calcular, descomponer, divisores, es_primo, escribir_cuenta, factorizar,
+                      fraccion, mcd, mcm, pedir_fraccion)
 from .spinners import Spinner, lista_spinners, spinner
 from .teclado import (confirmar, esperar, pedir, pedir_contrasena, pedir_numero, tecla,
                       tecla_pulsada, vaciar_teclado)
@@ -36,7 +41,7 @@ from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, i
                        terminar, titulo_ventana, volver_a_posicion)
 from .texto import centrar, escribir, escribir_derecha, escribir_lento
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 from .terminal import _abrir_en_consola_si_idle as _abrir
 
@@ -55,16 +60,22 @@ _GRUPOS = [
     ("Dibujar", ["rodear", "caja", "linea", "linea_vertical", "rellenar", "punto", "arte"]),
     ("Teclado", ["tecla", "tecla_pulsada", "vaciar_teclado", "esperar", "pedir",
                  "pedir_numero", "pedir_contrasena", "confirmar"]),
-    ("Cosas ya hechas", ["menu", "elegir", "mensaje", "tabla", "barra_progreso", "cargando",
-                         "calculando", "spinner", "lista_spinners"]),
+    ("Cosas ya hechas", ["menu", "elegir", "elegir_varios", "formulario", "mensaje", "tabla",
+                         "barra_progreso", "cargando", "calculando", "spinner", "lista_spinners"]),
     ("Juegos", ["jugar", "Sprite", "sprites", "cada", "fotograma", "pulsada"]),
-    ("Matrices", ["matriz", "pedir_matriz"]),
+    ("Matrices", ["matriz", "pedir_matriz", "sumar_matrices", "restar_matrices", "multiplicar_matrices",
+                  "transpuesta", "identidad", "traza", "determinante", "inversa", "rango",
+                  "potencia_matriz", "escalonar", "resolver_sistema", "clasificar_sistema"]),
+    ("Fracciones y números", ["fraccion", "pedir_fraccion", "calcular", "escribir_cuenta", "mcd", "mcm",
+                              "es_primo", "divisores", "factorizar", "descomponer"]),
+    ("Gráficas", ["grafica", "barras", "minigrafica"]),
     ("Ratón", ["activar_raton", "desactivar_raton", "esperar_clic", "leer_raton",
                "posicion_raton", "zona", "boton", "botones", "bucle"]),
     ("Diseñar y ver posiciones", ["diseno", "regla", "depurar"]),
 ]
 
-__all__ = [nombre for _, nombres in _GRUPOS for nombre in nombres] + ["ayuda", "Spinner", "ESTILOS", "CODIGOS_COLOR"]
+__all__ = [nombre for _, nombres in _GRUPOS for nombre in nombres] + ["ayuda", "Spinner", "Fraccion", "ESTILOS",
+                                                                     "CODIGOS_COLOR"]
 
 
 _PARECIDAS = {
@@ -78,6 +89,17 @@ _PARECIDAS = {
     "titulo": "cabecera", "letras_grandes": "grande", "teclado": "tecla", "getch": "tecla",
     "clic": "esperar_clic", "click": "esperar_clic", "raton": "activar_raton",
     "juego": "jugar", "bucle_juego": "jugar", "progreso": "barra_progreso", "barra": "barra_progreso",
+    "sumar": "sumar_matrices", "suma": "sumar_matrices", "restar": "restar_matrices", "resta": "restar_matrices",
+    "multiplicar": "multiplicar_matrices", "producto": "multiplicar_matrices", "det": "determinante",
+    "traspuesta": "transpuesta", "inverso": "inversa", "gauss": "escalonar", "sistema": "resolver_sistema",
+    "resolver": "resolver_sistema", "ecuaciones": "resolver_sistema", "potencia": "potencia_matriz",
+    "fracciones": "fraccion", "dividir": "calcular", "cuenta": "calcular", "operacion": "calcular",
+    "maximo_comun_divisor": "mcd", "minimo_comun_multiplo": "mcm", "gcd": "mcd", "lcm": "mcm",
+    "primo": "es_primo", "primos": "es_primo", "factores": "factorizar", "descomposicion": "descomponer",
+    "dibujar_funcion": "grafica", "funcion": "grafica", "grafico": "grafica", "plot": "grafica",
+    "barra_grafica": "barras", "histograma": "barras", "sparkline": "minigrafica",
+    "checkbox": "elegir_varios", "marcar": "elegir_varios", "casillas": "elegir_varios",
+    "formularios": "formulario", "pedir_datos": "formulario", "pedir_varios": "formulario",
 }
 
 

@@ -550,3 +550,200 @@ def pie(texto, color="gris"):
     ancho_p, alto_p = tamano()
     _salida(_mover(1, alto_p) + CSI + "2K")
     escribir(str(texto)[: ancho_p - 2], 2, alto_p, color=color)
+
+
+@_ventana
+def elegir_varios(opciones, titulo=None, x=None, y=None, marcadas=None, color=None,
+                  color_seleccion="amarillo", estilo="redondo", minimo=0, maximo=None):
+    """Una lista para marcar varias opciones: ↑↓ para moverte, Espacio para marcar y Enter para acabar.
+
+        extras = pantalla.elegir_varios(["Queso", "Tomate", "Jamón", "Piña"], titulo="Ingredientes")
+        # ['Queso', 'Jamón']
+
+        pantalla.elegir_varios(opciones, marcadas=["Queso"])     # que salgan ya marcadas
+        pantalla.elegir_varios(opciones, minimo=1, maximo=2)     # que elijan una o dos
+
+    Devuelve la lista de las opciones marcadas (en el mismo orden), o None si pulsas Esc.
+    Sin x ni y, sale en el centro de la pantalla.
+    """
+    opciones = [str(o) for o in opciones]
+    if not opciones:
+        raise ValueError("elegir_varios: necesito al menos una opción")
+    marcadas = [str(m) for m in (marcadas or [])]
+    marcado = [o in marcadas for o in opciones]
+    ancho_caja = max(len(o) for o in opciones) + 10
+    if titulo is not None:
+        ancho_caja = max(ancho_caja, len(str(titulo)) + 8)
+    ancho_p, alto_p = tamano()
+    visibles = max(1, min(len(opciones), alto_p - 4))
+    alto_caja = visibles + 2
+    x, y = _centrar_caja(x, y, ancho_caja, alto_caja + 2)
+    x, y = _posicion(x, y, "elegir_varios")
+    estaba_oculto = _estado["cursor_oculto"]
+    ocultar_cursor()
+    caja(x, y, ancho_caja, alto_caja, estilo, color=color, titulo=titulo, relleno=True)
+    pista = "↑↓ · Espacio marcar · Enter aceptar · Esc salir"
+    if y + alto_caja <= alto_p:
+        escribir(pista[: max(0, ancho_p - x)], x, y + alto_caja, tenue=True)
+    seleccion = 0
+    primera = 0
+    aviso = ""
+    try:
+        while True:
+            if seleccion < primera:
+                primera = seleccion
+            elif seleccion >= primera + visibles:
+                primera = seleccion - visibles + 1
+            for fila in range(visibles):
+                i = primera + fila
+                t = " %s %s " % ("[x]" if marcado[i] else "[ ]", opciones[i])
+                if i == seleccion:
+                    escribir(("▶" + t).ljust(ancho_caja - 2), x + 1, y + 1 + fila,
+                             color="negro", fondo=color_seleccion, negrita=True)
+                else:
+                    escribir((" " + t).ljust(ancho_caja - 2), x + 1, y + 1 + fila,
+                             color="verde" if marcado[i] else color)
+            if y + alto_caja + 1 <= alto_p:
+                escribir(aviso.ljust(len(pista))[: max(0, ancho_p - x)], x, y + alto_caja + 1, color="rojo")
+            t = tecla()
+            aviso = ""
+            if t in ("arriba", "w", "W"):
+                seleccion = (seleccion - 1) % len(opciones)
+            elif t in ("abajo", "s", "S", "tab"):
+                seleccion = (seleccion + 1) % len(opciones)
+            elif t in ("espacio", "x", "X"):
+                if not marcado[seleccion] and maximo is not None and sum(marcado) >= maximo:
+                    aviso = "Como mucho puedes marcar %d" % maximo
+                else:
+                    marcado[seleccion] = not marcado[seleccion]
+            elif t == "enter":
+                if sum(marcado) < minimo:
+                    aviso = "Tienes que marcar por lo menos %d" % minimo
+                    continue
+                return [o for o, m in zip(opciones, marcado) if m]
+            elif t == "esc":
+                return None
+    finally:
+        if not estaba_oculto:
+            mostrar_cursor()
+
+
+_TIPOS_CAMPO = {"texto": "texto", "numero": "numero", "número": "numero", "entero": "numero",
+                "decimal": "decimal", "fraccion": "fraccion", "fracción": "fraccion",
+                "contraseña": "contrasena", "contrasena": "contrasena"}
+
+
+def _convertir_campo(texto, tipo):
+    """Devuelve (valor, error)."""
+    from .numeros import Fraccion, _leer_fraccion
+
+    if tipo in ("texto", "contrasena"):
+        return texto, None
+    if not texto.strip():
+        return None, "Este hay que rellenarlo"
+    if tipo == "numero":
+        try:
+            return int(texto.strip()), None
+        except ValueError:
+            return None, "Tiene que ser un número entero"
+    if tipo == "decimal":
+        try:
+            return float(texto.strip().replace(",", ".")), None
+        except ValueError:
+            return None, "Tiene que ser un número"
+    try:
+        return Fraccion(_leer_fraccion(texto)), None
+    except (ValueError, ZeroDivisionError):
+        return None, "Tiene que ser una fracción, como 3/4"
+
+
+@_ventana
+def formulario(campos, titulo="Formulario", x=None, y=None, color="cian", ancho_campo=20):
+    """Pide varias cosas a la vez, cada una en su casilla, dentro de una caja.
+
+        datos = pantalla.formulario(["Nombre", "Apellidos", "Ciudad"])
+        print(datos["Nombre"])
+
+        datos = pantalla.formulario({"Nombre": "texto", "Edad": "numero",
+                                     "Altura": "decimal", "Clave": "contraseña"})
+
+    Tipos que valen: "texto", "numero" (entero), "decimal", "fraccion" y "contraseña".
+    Te mueves con ↑↓ (o Tab) y con Enter pasas a la siguiente; en la última, Enter acaba.
+    Devuelve un diccionario con lo que se ha escrito en cada casilla, o None si pulsas Esc.
+    """
+    if isinstance(campos, dict):
+        pares = [(str(k), str(v)) for k, v in campos.items()]
+    else:
+        pares = [(str(c), "texto") for c in campos]
+    if not pares:
+        raise ValueError("formulario: necesito al menos un campo")
+    tipos = []
+    for nombre, tipo in pares:
+        canon = _TIPOS_CAMPO.get(tipo.strip().lower())
+        if canon is None:
+            raise ValueError("formulario: no conozco el tipo %r (del campo %r). Usa uno de estos: texto, "
+                             "numero, decimal, fraccion, contraseña" % (tipo, nombre))
+        tipos.append(canon)
+    nombres = [n for n, _ in pares]
+    ancho_campo = _entero(ancho_campo, "ancho_campo", "formulario")
+    ancho_nombre = max(len(n) for n in nombres) + 1
+    ancho_caja = max(ancho_nombre + ancho_campo + 6, len(str(titulo)) + 8)
+    alto_caja = len(nombres) * 2 + 1
+    ancho_p, alto_p = tamano()
+    x, y = _centrar_caja(x, y, ancho_caja, alto_caja + 2)
+    x, y = _posicion(x, y, "formulario")
+    textos = [""] * len(nombres)
+    actual = 0
+    aviso = ""
+    estaba_oculto = _estado["cursor_oculto"]
+    ocultar_cursor()
+    caja(x, y, ancho_caja, alto_caja, "redondo", color=color, titulo=titulo, relleno=True)
+    pista = "↑↓ casilla · Enter siguiente · Esc salir"
+    if y + alto_caja <= alto_p:
+        escribir(pista[: max(0, ancho_p - x)], x, y + alto_caja, tenue=True)
+    try:
+        while True:
+            for i, nombre in enumerate(nombres):
+                fila = y + 1 + i * 2
+                escribir((nombre + ":").ljust(ancho_nombre), x + 2, fila, negrita=i == actual)
+                ver = "●" * len(textos[i]) if tipos[i] == "contrasena" else textos[i]
+                if i == actual:
+                    ver = (ver + "_")[-ancho_campo:]
+                    escribir(ver.ljust(ancho_campo), x + 3 + ancho_nombre, fila, color="negro",
+                             fondo="amarillo")
+                else:
+                    escribir(ver[:ancho_campo].ljust(ancho_campo), x + 3 + ancho_nombre, fila,
+                             fondo="gris")
+            if y + alto_caja + 1 <= alto_p:
+                escribir(aviso.ljust(len(pista))[: max(0, ancho_p - x)], x, y + alto_caja + 1, color="rojo")
+            t = tecla()
+            aviso = ""
+            if t == "esc":
+                return None
+            if t == "arriba":
+                actual = (actual - 1) % len(nombres)
+            elif t in ("abajo", "tab"):
+                actual = (actual + 1) % len(nombres)
+            elif t == "borrar":
+                textos[actual] = textos[actual][:-1]
+            elif t == "enter":
+                if actual < len(nombres) - 1:
+                    actual += 1
+                    continue
+                resultado = {}
+                for i, nombre in enumerate(nombres):
+                    valor, error = _convertir_campo(textos[i], tipos[i])
+                    if error:
+                        actual = i
+                        aviso = "%s: %s" % (nombre, error)
+                        break
+                    resultado[nombre] = valor
+                else:
+                    return resultado
+            elif t == "espacio":
+                textos[actual] += " "
+            elif len(t) == 1 and t.isprintable():
+                textos[actual] += str(t)
+    finally:
+        if not estaba_oculto:
+            mostrar_cursor()

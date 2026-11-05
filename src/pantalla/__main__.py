@@ -180,6 +180,48 @@ def demo_matrices():
     ancho, alto = pantalla.matriz(A, 3, 5, nombre="A")
     pantalla.matriz(A, 3 + ancho + 4, 5, nombre="|A|", det=True, color="cian")
     pantalla.escribir("Y en Python es esta lista: %r" % (A,), 3, 5 + alto + 1, color="verde")
+    fila = 5 + alto + 3
+    if len(A) == len(A[0]):
+        det = pantalla.determinante(A)
+        pantalla.escribir("determinante(A) = %s" % det, 3, fila, color="amarillo")
+        if det != 0:
+            pantalla.matriz(pantalla.inversa(A), 3, fila + 2, nombre="inversa(A)", color="verde")
+    else:
+        pantalla.matriz(pantalla.transpuesta(A), 3, fila, nombre="transpuesta(A)", color="verde")
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
+def demo_fracciones():
+    pantalla.limpiar()
+    pantalla.cabecera("Fracciones y números")
+    pantalla.escribir('pantalla.escribir_cuenta("1/2 + 1/3")', 3, 3, color="gris")
+    pantalla.escribir_cuenta("1/2 + 1/3", 3, 5)
+    pantalla.escribir_cuenta("3/4 : 1/2", 22, 5)
+    pantalla.escribir_cuenta("(2/3 - 1/6) · 4", 40, 5, color="cian")
+    pantalla.escribir("pantalla.descomponer(360)", 3, 10, color="gris")
+    pantalla.descomponer(360, 3, 12)
+    pantalla.escribir("mcd(12, 18) = %d    mcm(4, 6) = %d" % (pantalla.mcd(12, 18), pantalla.mcm(4, 6)),
+                      30, 12, color="amarillo")
+    pantalla.escribir("divisores(36) = %s" % pantalla.divisores(36), 30, 14)
+    primos = " ".join(str(n) for n in range(2, 60) if pantalla.es_primo(n))
+    pantalla.escribir("primos: " + primos, 30, 16, color="verde")
+    pantalla.pie("Pulsa una tecla para volver")
+    pantalla.tecla()
+
+
+def demo_graficas():
+    import math
+
+    pantalla.limpiar()
+    pantalla.cabecera("Gráficas")
+    ancho = max(30, min(60, pantalla.ancho() - 34))
+    pantalla.grafica([math.sin, math.cos], -6.3, 6.3, 2, 3, ancho=ancho, alto=12)
+    pantalla.escribir("sin(x) y cos(x)", 6, 16, color="gris")
+    pantalla.barras({"Ana": 8.5, "Luis": 6, "Marta": 9.75, "Pablo": 4}, ancho + 5, 4, ancho=28,
+                    colores=["cian", "amarillo", "verde", "rojo"])
+    pantalla.escribir("Ventas: " + pantalla.minigrafica([3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5]), ancho + 5, 10,
+                      color="verde")
     pantalla.pie("Pulsa una tecla para volver")
     pantalla.tecla()
 
@@ -197,7 +239,7 @@ def main():
     secciones = {
         "Lo básico": ["Colores", "Cajas y dibujos", "Fuentes ASCII", "Teclado"],
         "Cosas ya hechas": ["Menús", "Tablas, barras y mensajes", "Pedir datos"],
-        "Más": ["Matrices", "Mover una @", "Ver posiciones", "Salir"],
+        "Más": ["Matrices", "Fracciones", "Gráficas", "Mover una @", "Ver posiciones", "Salir"],
     }
     ayudas = {
         "Colores": "Todos los colores y estilos de texto",
@@ -207,14 +249,17 @@ def main():
         "Menús": "menu() con ayudas e iconos, elegir() y el menú con secciones",
         "Tablas, barras y mensajes": "tabla, barra_progreso, cargando, mensaje",
         "Pedir datos": "pedir, pedir_numero y confirmar",
-        "Matrices": "pedir_matriz() con las flechas y matriz() para dibujarla",
+        "Matrices": "pedir_matriz(), matriz(), determinante() e inversa()",
+        "Fracciones": "escribir_cuenta(), descomponer(), mcd, mcm y primos",
+        "Gráficas": "grafica(), barras() y minigrafica()",
         "Mover una @": "Un juego mínimo con las flechas",
         "Ver posiciones": "pantalla.depurar(): mueve una cruz y mira x e y",
         "Salir": "Hasta luego",
     }
     iconos = {
         "Colores": "■", "Cajas y dibujos": "┌┐", "Fuentes ASCII": "A", "Teclado": "Aa", "Menús": "≡",
-        "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Matrices": "[ ]",
+        "Tablas, barras y mensajes": "▤", "Pedir datos": "?", "Matrices": "[ ]", "Fracciones": "½",
+        "Gráficas": "~",
         "Mover una @": "@", "Ver posiciones": "╋", "Salir": "←",
     }
     pantalla.iniciar(titulo="pantalla · demo")
@@ -241,6 +286,10 @@ def main():
                 demo_pedir()
             elif elegida == "Matrices":
                 demo_matrices()
+            elif elegida == "Fracciones":
+                demo_fracciones()
+            elif elegida == "Gráficas":
+                demo_graficas()
             elif elegida == "Mover una @":
                 demo_mover()
             elif elegida == "Ver posiciones":

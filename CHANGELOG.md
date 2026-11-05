@@ -1,5 +1,17 @@
 # Cambios
 
+## 0.4.0
+
+- Matrices: `sumar_matrices()`, `restar_matrices()`, `multiplicar_matrices()`, `transpuesta()`, `identidad()`, `traza()`, `determinante()`, `inversa()`, `rango()` y `potencia_matriz()`. Todo con fracciones exactas.
+- Gauss: `escalonar()` (con `pasos=True` enseña cada operación y con `reducida=True` hace Gauss-Jordan), `resolver_sistema()` y `clasificar_sistema()`.
+- `matriz(..., ampliada=True)` pinta la raya de la matriz ampliada.
+- Fracciones: `fraccion()`, `pedir_fraccion()`, `calcular()` y `escribir_cuenta()`, que dibuja la cuenta como en el cuaderno.
+- Números: `mcd()`, `mcm()`, `es_primo()`, `divisores()`, `factorizar()` y `descomponer()`.
+- Gráficas: `grafica()` para funciones (una o varias), `barras()` y `minigrafica()`.
+- `elegir_varios()` para marcar varias opciones y `formulario()` para pedir varias cosas a la vez.
+- La demo (`python -m pantalla`) tiene apartados de fracciones y gráficas, y la de matrices hace más cosas.
+- Ejemplos nuevos: 13 a 16.
+
 ## 0.3.1
 
 - El paquete ya solo lleva la librería (antes iban también la web y otros archivos que no hacían falta).
