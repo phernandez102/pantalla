@@ -103,6 +103,18 @@ class TestDibujosDeMatrices(Base):
         salida = self.captura(pantalla.matriz, [[1, 2, 5], [3, 4, 6]], ampliada=True)
         self.assertIn("│ 1  2 │ 5 │", salida)
 
+    def test_lo_que_no_cabe_por_abajo_no_se_escribe(self):
+        # si no, la terminal lo amontona todo en la última fila
+        from pantalla.numeros import _sacar
+        lineas = ["uno", "dos", "tres", "cuatro", "cinco"]
+        with mock.patch("pantalla.numeros._es_terminal", return_value=True):
+            salida = self.captura(_sacar, lineas, 1, self.ALTO - 2, "prueba")
+        self.assertIn("\x1b[%d;1Htres" % self.ALTO, salida)
+        self.assertNotIn("cuatro", salida)
+        # escribiendo a un archivo no se corta nada
+        salida = self.captura(_sacar, lineas, 1, self.ALTO - 2, "prueba")
+        self.assertIn("\x1b[%d;1Hcinco" % (self.ALTO + 2), salida)
+
     def test_escalonar_con_pasos(self):
         salida = sin_colores(self.captura(pantalla.escalonar, [[1, 2], [3, 4]], pasos=True))
         self.assertIn("F2 → F2 - 3·F1", salida)

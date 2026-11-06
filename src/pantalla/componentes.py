@@ -10,7 +10,7 @@ from .colores import estilo as _estilo_ansi
 from .dibujo import _piezas, caja
 from .teclado import _con_teclas, _ventana, tecla
 from .dibujo import rellenar
-from .terminal import (CSI, ESC, _entero, _estado, _fin_de_estilo, _mover, _posicion, _salida,
+from .terminal import (CSI, ESC, _ayuda_que_cabe, _entero, _estado, _fin_de_estilo, _mover, _posicion, _salida,
                        mostrar_cursor, ocultar_cursor, tamano)
 from .texto import escribir
 
@@ -136,7 +136,7 @@ def menu(opciones, titulo=None, x=None, y=None, color=None, color_seleccion="ama
     if ayudas and ay == fila_pista:
         fila_pista = fila_pista + 1
     if fila_pista <= alto_p:
-        escribir("↑↓ elegir · Enter aceptar · Esc salir"[: max(0, ancho_p - x)], x, fila_pista, tenue=True)
+        escribir(_ayuda_que_cabe("↑↓ elegir · Enter aceptar · Esc salir", ancho_p - x), x, fila_pista, tenue=True)
     try:
         while True:
             if seleccion < primera:
@@ -339,7 +339,12 @@ def mensaje(texto, titulo="Aviso", color=None, color_borde="cian", estilo="doble
 
     Devuelve la tecla pulsada.
     """
-    lineas = str(texto).split("\n")
+    import textwrap
+    # las líneas que no caben en la pantalla se parten
+    cabe = max(10, tamano()[0] - 8)
+    lineas = []
+    for linea in str(texto).split("\n"):
+        lineas += (textwrap.wrap(linea, cabe) or [""]) if len(linea) > cabe else [linea]
     pie = "Pulsa una tecla"
     ancho_caja = max([len(l) for l in lineas] + [len(pie), len(str(titulo)) + 4]) + 6
     alto_caja = len(lineas) + 4 + (1 if esperar_tecla else 0)

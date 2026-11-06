@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pantalla"
-version = "0.6.0"
+version = "1.0.0"
 description = "gotoxy para el siglo XXI: colores, cajas, menús, letras ASCII, ratón, spinners y juegos sin bucles en la terminal. En español y pensada para aprender Python."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -14,7 +14,7 @@ authors = [{ name = "phernandez102" }]
 keywords = ["terminal", "consola", "gotoxy", "colores", "tui", "menu", "educación", "español", "conio",
             "ascii-art", "figlet", "juegos", "spinner", "raton", "principiantes"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Education",
     "Natural Language :: Spanish",

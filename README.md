@@ -80,6 +80,8 @@ Y desde Python, `pantalla.ayuda()` abre un menú con todas las funciones: eliges
 
 En cualquier terminal de verdad: **cmd**, **PowerShell**, **Windows Terminal**, la terminal de **VS Code**, la de Linux o la de Mac.
 
+Las fotos de `imagen()` y los dibujos 3D salen con píxeles de verdad en las terminales que saben pintar imágenes: **Windows Terminal**, **WezTerm**, **kitty**, **Ghostty**, **iTerm2**, **foot**, **Konsole** o **xterm** con Sixel. En **cmd**, la **Terminal del Mac** y las demás salen con bloques ▀ de colores o con puntitos braille, sin que tengas que cambiar nada. Si tu terminal sí sabe y no sale, pon `PANTALLA_IMAGENES=1` (o `kitty`); con `PANTALLA_IMAGENES=0` no lo intenta nunca.
+
 **IDLE** no es una terminal. En Windows, si pulsas F5 en IDLE, pantalla abre tu programa en una ventana de cmd y lo ejecuta allí (si no quieres que lo haga, pon la variable de entorno `PANTALLA_NO_ABRIR=1`). En Linux y Mac, ejecútalo desde la terminal. En **Thonny**, usa *Ejecutar → Ejecutar el script actual en terminal*.
 
 ## Cómo funcionan las posiciones
@@ -564,6 +566,67 @@ pantalla.distancia_punto_recta((0, 0), "3x + 4y - 10 = 0", pasos=True)
 # d = |3·0 + 4·0 + (-10)| / √(3² + 4²) = 10 / 5 = 2
 ```
 
+### Espacio (3D)
+
+Planos, rectas y puntos del espacio, como en 2.º de bachillerato. Todo sale con fracciones exactas.
+
+```python
+pi = pantalla.plano((1, 0, 2), (0, 3, 0), (1, 1, 1))     # por tres puntos
+pi = pantalla.plano((1, 2, 3), normal=(1, 1, 1))         # por un punto y el vector normal
+pi = pantalla.plano("x/3 + y/3 + z/3 = 1")               # escrito
+
+print(pi)                   # x + y + z - 3 = 0
+pi.segmentaria()            # x/3 + y/3 + z/3 = 1
+pi.vectorial()              # (x, y, z) = (0, 0, 3) + λ·(1, 0, -1) + μ·(0, 1, -1)
+
+r = pantalla.recta((1, 2, 3), (2, 2, 5))                 # con puntos de tres números es del espacio
+r = pantalla.recta("(x - 1)/2 = y = z + 1")              # continua
+r = pantalla.recta("x + y = 3", "z = 1")                 # donde se cortan dos planos
+r.parametricas(), r.continua(), r.implicitas()
+```
+
+`ecuaciones_plano()` y `ecuaciones_recta()` escriben todas las ecuaciones. Y para hacer cosas con ellos:
+
+```python
+pantalla.posicion("x + y + z = 3", "x - y = 1", "z = 2", pasos=True)   # con los rangos (Rouché)
+pantalla.interseccion("x + y + z = 3", "x - y = 1", "z = 2")           # (1, 0, 2)
+pantalla.distancia((1, 2, 3), "2x - y + 2z = 1", pasos=True)           # punto-plano, recta-recta...
+pantalla.angulo(r, "z = 0", pasos=True)
+pantalla.proyeccion((1, 2, 3), "x + y + z = 0")
+pantalla.simetrico((1, 2, 3), "x + y + z = 0")
+pantalla.perpendicular_comun(r, s)
+pantalla.area_triangulo((1, 0, 0), (0, 2, 0), (0, 0, 3), pasos=True)
+pantalla.volumen_tetraedro((0, 0, 0), (1, 0, 0), (0, 2, 0), (0, 0, 3))
+```
+
+Y verlos en 3D:
+
+```python
+pantalla.ver_espacio({"π": pi, "r": r, "P": (1, 1, 1)})      # a pantalla completa, se gira con el ratón
+pantalla.dibujar_espacio(["x + y + z = 3", "z = 1"])         # quieto, como un print
+pantalla.dibujar_espacio(pi, 40, 2, girar=True)              # en su sitio, y se gira con el ratón
+```
+
+En las terminales que pintan imágenes (Windows Terminal, WezTerm, kitty, iTerm2...) los planos salen rellenos y transparentes, y lo que está detrás va con rayitas. En las demás, o con `estilo="puntos"`, con puntitos braille. Con `girar=True` el dibujo se queda en la pantalla y se puede girar arrastrándolo mientras tu programa espera otra cosa (un `menu()`, `tecla()`, `esperar_clic()`...): así puedes tener un menú a un lado y el 3D al otro.
+
+### Imágenes y modelos 3D
+
+```python
+pantalla.imagen("gato.jpg")                      # donde esté el cursor, como un print
+pantalla.imagen("gato.jpg", 5, 2, ancho=40)      # en (5, 2), de 40 columnas
+pantalla.imagen("logo.png", estilo="letras")     # con . : - = + * # % @ de colores
+```
+
+Abre PNG, JPG, GIF, BMP y PPM sin instalar nada (con Pillow abre también WEBP y los JPG progresivos, y más rápido). Si la terminal sabe pintar imágenes sale la foto de verdad; si no, con medios bloques ▀ de colores.
+
+```python
+pantalla.ver_modelo("tetera.obj")                     # un modelo 3D (.obj o .stl), para girarlo
+pantalla.ver_modelo("cara.jpg", relieve=0.4)          # una foto en relieve: lo claro sube
+pantalla.ver_modelo(lambda x, y: x**2 - y**2)         # la superficie z = f(x, y)
+pantalla.dibujar_modelo("pieza.stl", 40, 2, girar=True)
+m = pantalla.modelo("tetera.obj")                     # leerlo una vez y usarlo muchas
+```
+
 ### Polinomios
 
 <p align="center"><img src="https://raw.githubusercontent.com/phernandez102/pantalla/main/.github/img/polinomios.svg" alt="Ruffini de x³ - 2x² - x + 2, su factorización, la ecuación de segundo grado paso a paso y la gráfica" width="760"></p>
@@ -846,6 +909,8 @@ En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil a
 20. `20_estadistica.py`: meter las notas de la clase y sacar el histograma y la tabla de frecuencias
 21. `21_practicar.py`: hacer 10 ejercicios del tema que elijas
 22. `22_records.py`: un juego de rapidez con cuenta atrás, cronómetro y tabla de récords
+23. `23_espacio.py`: un menú de planos y rectas a un lado y el dibujo 3D al otro, que se gira con el ratón
+24. `24_modelos.py`: una foto en la terminal, una casita `.obj` con sus colores (`casa.obj` y `casa.mtl`) y una superficie 3D para girarla
 
 ## Si algo falla
 

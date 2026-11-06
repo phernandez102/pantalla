@@ -22,7 +22,7 @@ except ImportError:
     pass
 
 from .colores import estilo as _estilo_ansi
-from .terminal import _es_terminal, _estado, _fin_de_estilo, _juego, _salida
+from .terminal import _es_terminal, _estado, _fin_de_estilo, _giratorios, _juego, _salida
 from .texto import escribir
 from .terminal import mostrar_cursor, ocultar_cursor
 
@@ -303,6 +303,8 @@ def _tecla():
     if not _hay_teclado():
         linea = input()
         return linea.strip() or "enter"
+    if _giratorios and not _estado.get("sin_giros"):
+        return _tecla_con_raton(True)
     if os.name == "nt":
         import msvcrt
 
@@ -313,6 +315,23 @@ def _tecla():
             return _traducir_unix(datos)
         from .raton import _guardar_evento_unix
         _guardar_evento_unix(datos)
+
+
+def _tecla_con_raton(espera):
+    # con un dibujo que se gira hay que leer también el ratón mientras se esperan teclas
+    from .raton import _apuntar, _leer_evento, _raton, activar_raton
+    if not _raton["activo"]:
+        activar_raton()
+    while True:
+        try:
+            ev = _leer_evento(espera)
+        except EOFError:
+            return None if not espera else "esc"
+        if ev is None:
+            return None
+        if ev["tipo"] == "tecla":
+            return ev["tecla"]
+        _apuntar(ev)
 
 
 def tecla_pulsada():
@@ -339,6 +358,8 @@ def _tecla_pulsada():
         return _juego["teclas"].pop(0) if _juego["teclas"] else None
     if not _hay_teclado():
         return None
+    if _giratorios and not _estado.get("sin_giros"):
+        return _tecla_con_raton(False)
     if os.name == "nt":
         import msvcrt
 

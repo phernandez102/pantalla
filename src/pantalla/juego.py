@@ -620,6 +620,8 @@ def jugar(actualizar, velocidad=20, ancho=None, alto=None, fondo=None, salir_con
     aparte_antes = _estado["pantalla_aparte"]
     teclas_antes = teclado._modo["original"] is not None
     fuente_antes = raton_mod._raton["fuente"]
+    giros_antes = _estado.get("sin_giros", False)
+    _estado["sin_giros"] = True
     partida = None
     try:
         partida = _Partida(velocidad, ancho, alto, codigo_fondo, salir_con, real)
@@ -672,6 +674,7 @@ def jugar(actualizar, velocidad=20, ancho=None, alto=None, fondo=None, salir_con
     except KeyboardInterrupt:
         return None
     finally:
+        _estado["sin_giros"] = giros_antes
         if isinstance(sys.stdout, _Captura):
             sys.stdout = real
         _juego["mostrar"] = None

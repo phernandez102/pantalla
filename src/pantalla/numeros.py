@@ -12,10 +12,11 @@ números primos y la descomposición en factores primos de toda la vida.
 import ast
 import operator
 import re
+import sys
 from fractions import Fraction
 
 from .colores import estilo as _estilo_ansi
-from .terminal import _fin_de_estilo, _mover, _posicion, _salida
+from .terminal import _es_terminal, _fin_de_estilo, _mover, _posicion, _salida, alto as _alto
 from .texto import escribir
 
 
@@ -304,6 +305,9 @@ def _sacar(lineas, x, y, funcion):
     if y is None:
         raise TypeError("%s: si me das x también necesito y" % funcion)
     x, y = _posicion(x, y, funcion)
+    if _es_terminal(sys.stdout):
+        # lo que no cabe por abajo la terminal lo pone todo encima de la última fila
+        lineas = lineas[:max(0, _alto() - y + 1)]
     _salida("".join(_mover(x, y + k) + l for k, l in enumerate(lineas)))
 
 

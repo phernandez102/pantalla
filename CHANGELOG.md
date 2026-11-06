@@ -1,5 +1,22 @@
 # Cambios
 
+## 1.0.0
+
+- Geometría del espacio (2.º de bachillerato): `plano()` y `Plano` (por tres puntos, punto y normal, punto y dos vectores, o escrito), con la ecuación general, vectorial, paramétricas y segmentaria. `recta()` con puntos de tres números da una `Recta3D`, también escrita en continua, paramétricas o como corte de dos planos.
+- `posicion()` de dos rectas, recta y plano, dos o tres planos, con `pasos=True` enseña los rangos (Rouché). `interseccion()`, `distancia()` (también entre rectas que se cruzan), `angulo()`, `proyeccion()`, `simetrico()`, `perpendicular_comun()`, `punto_medio()`, `plano_mediador()`, `area_triangulo()`, `volumen_tetraedro()`, `estan_alineados()` y `son_coplanarios()`.
+- `ver_espacio()` enseña planos, rectas y puntos en 3D a pantalla completa y se gira con el ratón. `dibujar_espacio()` lo dibuja quieto. En las terminales que pintan imágenes (Sixel o el de kitty) los planos salen rellenos y transparentes, lo de detrás con rayitas, los planos iguales con su borde a trozos y los puntos con unas guías hasta el suelo. Con `estilo="puntos"`, con braille.
+- `girar=True` en `dibujar_espacio()` y `dibujar_modelo()`: el dibujo se queda en su sitio y se gira arrastrándolo con el ratón mientras el programa espera un `menu()`, `tecla()`, `esperar_clic()`, `bucle()`... `limpiar()` lo quita.
+- `imagen()`: fotos y dibujos (PNG, JPG, GIF, BMP, PPM) en la terminal sin instalar nada. Con Pillow abre más tipos. Sale de verdad en Windows Terminal, WezTerm, kitty, Ghostty, iTerm2, foot o Konsole, y con medios bloques ▀ de colores en cmd y la Terminal del Mac. También `estilo="letras"`.
+- `ver_modelo()`, `dibujar_modelo()` y `modelo()`: modelos 3D `.obj` (con sus colores del `.mtl`) y `.stl`, fotos en relieve y superficies `z = f(x, y)`, con las caras iluminadas.
+- Se sabe pintar imágenes con el protocolo de kitty además de con Sixel. Se pregunta a la terminal una sola vez.
+- En el constructor web, el conversor de imágenes tiene dos formas nuevas: "Cuartos ▖▞▟", que prueba en cada letra cómo repartir sus cuatro trocitos en dos colores, y "Letras por su forma", que elige la letra que más se parece a ese trozo de la foto (no solo por lo clara que es). Con colores hace tramado, y la foto se encoge mejor.
+- En la documentación web hay apartados de espacio e imágenes y modelos 3D, que se giran arrastrándolos.
+- Ejemplos nuevos: 23 y 24, con una casita `casa.obj` para probar los modelos.
+- En Linux y Mac, las teclas que pulsas durante una `pausa()` o una `cuenta_atras()` ya no salen escritas en la pantalla (`^[[A`...).
+- `mensaje()` parte las líneas largas para que la ventana quepa en la pantalla.
+- Las ayudas de abajo de `menu()`, `pedir_matriz()`, `ver_espacio()` y `ver_modelo()` quitan cosas si no caben, pero siempre dejan "Esc salir".
+- Lo que se escribe en varias líneas (leyendas, pasos de las cuentas...) ya no se amontona en la última fila cuando no cabe por abajo.
+
 ## 0.6.0
 
 - Polinomios: `Polinomio` y `polinomio("2x^3 - 3x + 1")`, que se suman, restan, multiplican, se evalúan con `p(2)` y tienen `derivada()`. `dividir_polinomios()`, `ruffini()` (con `pasos=True` dibuja la tabla), `raices()` y `factorizar_polinomio()`, que con `pasos=True` hace un Ruffini por cada raíz.

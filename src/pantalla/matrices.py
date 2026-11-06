@@ -14,7 +14,7 @@ from .colores import estilo as _estilo_ansi
 from .dibujo import caja, rellenar
 from .numeros import _a_numero, _bonito
 from .teclado import _ventana, tecla
-from .terminal import (_entero, _estado, _fin_de_estilo, _mover, _posicion, _salida,
+from .terminal import (_ayuda_que_cabe, _entero, _estado, _fin_de_estilo, _mover, _posicion, _salida,
                        mostrar_cursor, ocultar_cursor, tamano)
 from .texto import escribir
 
@@ -167,7 +167,7 @@ def pedir_matriz(nombre="A", filas=None, columnas=None, cuadrada=False, maximo=6
     fija_c = columnas is not None
 
     ancho_p, alto_p = tamano()
-    ancho_v = min(ancho_p, max(46, len(nombre) + 3 + maximo * 9 + 6))
+    ancho_v = min(ancho_p, max(64, len(nombre) + 3 + maximo * 9 + 6))
     alto_v = min(alto_p, maximo + 10)
     vx = max(1, (ancho_p - ancho_v) // 2 + 1)
     vy = max(1, (alto_p - alto_v) // 2 + 1)
@@ -215,7 +215,7 @@ def pedir_matriz(nombre="A", filas=None, columnas=None, cuadrada=False, maximo=6
                 a2 = {"color": "negro", "fondo": "amarillo"} if campo == 1 else {}
                 escribir(" Filas: %d %s" % (f, "(fija)" if fija_f else "↑↓ "), vx + 2, abajo - 1, **a1)
                 escribir(" Columnas: %d %s" % (c, "(fija)" if fija_c else "↑↓ "), vx + 20, abajo - 1, **a2)
-            escribir("↑↓ cambiar · ←→ filas o columnas · Enter seguir · Esc salir"[: ancho_v - 4],
+            escribir(_ayuda_que_cabe("↑↓ cambiar · ←→ filas o columnas · Enter seguir · Esc salir", ancho_v - 4),
                      vx + 2, abajo, tenue=True)
             t = tecla()
             cambio = 0

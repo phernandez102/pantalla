@@ -22,6 +22,7 @@ devuelve None.
 import atexit
 import os
 import sys
+import time
 
 from . import terminal as _t
 from .terminal import CSI, _es_terminal, _estado, _salida, mostrar_cursor, ocultar_cursor, tamano
@@ -360,7 +361,13 @@ def _drenar_unix():
 
 
 def _guardar_evento_unix(datos):
-    _apuntar(_decodificar_unix(datos))
+    evento = _decodificar_unix(datos)
+    if evento is not None and not _estado.get("sin_giros") and any(g.raton(evento) for g in reversed(_t._giratorios)):
+        for g in _t._giratorios:
+            if g.sucio:
+                g.pintar(rapido=True)
+        return
+    _apuntar(evento)
 
 
 def _es_arrastre(evento):
@@ -386,8 +393,7 @@ def _apuntar(evento):
             _guardar(evento)
 
 
-def _leer_evento(espera=True):
-    """Siguiente evento, o None si espera=False y no hay nada. EOFError si se cierra la entrada."""
+def _leer_crudo(espera):
     if _raton["fuente"] is not None:
         evento = _raton["fuente"](espera)
     elif _es_windows():
@@ -397,6 +403,40 @@ def _leer_evento(espera=True):
     if evento and evento["tipo"] in ("movimiento", "clic"):
         _raton["posicion"] = (evento["x"], evento["y"])
     return evento
+
+
+def _leer_evento(espera=True):
+    """Siguiente evento, o None si espera=False y no hay nada. EOFError si se cierra la entrada.
+
+    Los clics y arrastres encima de un dibujo con girar=True se los queda el dibujo (lo gira)."""
+    giratorios = _t._giratorios
+    if not giratorios or _estado.get("sin_giros"):
+        return _leer_crudo(espera)
+    while True:
+        # se juntan todos los movimientos que hayan llegado y se pinta una vez
+        sucio = any(g.sucio for g in giratorios)
+        fino = [g for g in giratorios if g.fino_pendiente]
+        evento = _leer_crudo(False if sucio or fino else espera)
+        if evento is not None and any(g.raton(evento) for g in reversed(giratorios)):
+            continue
+        for g in giratorios:
+            if g.sucio:
+                g.pintar(rapido=True)
+        if evento is not None:
+            return evento
+        if sucio:
+            continue
+        if not espera:
+            return None
+        # en linux esperando también puede volver sin nada (al soltar el botón)
+        if not fino:
+            continue
+        # cuando se deja de arrastrar, se vuelve a pintar con más calidad
+        if time.time() - max(g.cuando for g in fino) > 0.25:
+            for g in fino:
+                g.pintar()
+        else:
+            time.sleep(0.02)
 
 
 def _siguiente_evento():

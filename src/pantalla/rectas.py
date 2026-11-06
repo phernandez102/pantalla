@@ -253,7 +253,7 @@ def _leer_recta(texto):
     return r
 
 
-def recta(A, B=None, vector=None, pendiente=None):
+def recta(A, B=None, vector=None, pendiente=None, perpendicular=None, paralela=None):
     """Hace una recta: por dos puntos, por un punto con un vector o con la pendiente, o escrita.
 
         r = pantalla.recta((1, 3), (2, 5))
@@ -261,11 +261,36 @@ def recta(A, B=None, vector=None, pendiente=None):
         r = pantalla.recta((0, 1), pendiente=2)
         r = pantalla.recta("y = 2x + 1")
         r = pantalla.recta("2x - y + 1 = 0")
+        r = pantalla.recta((1, 1), perpendicular="y = 2x")     # por (1, 1) y perpendicular a otra
+        r = pantalla.recta((1, 1), paralela="y = 2x")
 
-    Devuelve una Recta: print(r) sale la ecuación general, y tiene r.explicita(), r.vectorial()...
+    Con puntos de tres números (x, y, z) es una recta del espacio:
+
+        r = pantalla.recta((1, 2, 3), (2, 2, 5))
+        r = pantalla.recta((1, 2, 3), vector=(1, 0, 2))
+        r = pantalla.recta("(x - 1)/2 = (y + 1)/3 = z")       # en continua
+        r = pantalla.recta("x + y = 3", "z = 1")              # donde se cortan dos planos
+        r = pantalla.recta((1, 2, 3), perpendicular=pi)       # perpendicular a un plano
+
+    Devuelve una Recta: print(r) sale la ecuación general (en el espacio, la vectorial),
+    y tiene r.vectorial(), r.parametricas(), r.continua()...
     """
-    if isinstance(A, Recta):
+    if isinstance(A, Recta) and B is None:
         return A
+    from . import espacio
+    if espacio._es_3d(A, B, vector, perpendicular, paralela):
+        if pendiente is not None:
+            raise TypeError("recta: en el espacio no hay pendiente. Usa vector=(x, y, z)")
+        return espacio.recta(A, B, vector, perpendicular, paralela)
+    if perpendicular is not None or paralela is not None:
+        if sum(x is not None for x in (B, vector, pendiente, perpendicular, paralela)) != 1:
+            raise TypeError("recta: dame un punto y otra cosa: otro punto, vector=, pendiente=, "
+                            "perpendicular= o paralela=")
+        otra = recta(perpendicular if perpendicular is not None else paralela)
+        if not isinstance(otra, Recta):
+            raise TypeError("recta: perpendicular= y paralela= tienen que ser otra recta")
+        v = [otra.a, otra.b] if perpendicular is not None else list(otra.vector)
+        return Recta(A, vector=v)
     return Recta(A, B, vector, pendiente)
 
 
@@ -275,8 +300,12 @@ def ecuaciones_recta(A, B=None, vector=None, pendiente=None, x=None, y=None):
 
         pantalla.ecuaciones_recta((1, 3), (2, 5))
         pantalla.ecuaciones_recta(r)                  # o una que ya tengas
+        pantalla.ecuaciones_recta((1, 2, 3), (2, 2, 5))   # del espacio: vectorial, paramétricas, continua e implícitas
     """
     r = recta(A, B, vector, pendiente)
+    from . import espacio
+    if isinstance(r, espacio.Recta3D):
+        return espacio._ecuaciones_recta3d(r, x, y)
     filas = [("Vectorial", r.vectorial()), ("Paramétricas", r.parametricas()), ("Continua", r.continua()),
              ("General", r.general()), ("Explícita", r.explicita())]
     if r.b != 0:

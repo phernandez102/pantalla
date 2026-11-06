@@ -339,6 +339,8 @@ body.probando #celda-luz, body.probando #fila-luz, body.probando #col-luz { disp
 .soltar.encima, .soltar:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
 .dlg-vista { background: var(--term-bg); border-radius: var(--r-sm); padding: 10px; overflow: auto; min-height: 240px; max-height: 62vh; display: grid; place-items: center; }
 .dlg-vista p { color: #a8a29e; font-size: 0.9rem; }
+.img-nota { margin: 0; padding: 10px 20px 0; font-size: 13px; color: var(--muted); }
+.img-nota code { color: var(--ink); }
 .dlg-pie { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .dlg-pie small { color: var(--muted); }
 
@@ -527,6 +529,8 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 .doc-filas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 20px; }
 .doc-card { background: var(--paper); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 72px; transition: box-shadow .3s; }
 .doc-card.destacada { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.doc-card.grande { grid-column: 1 / -1; }
+.doc-card.grande .doc-preview { height: min(72vh, 560px); }
 @supports (grid-template-rows: subgrid) {
   .doc-card { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; margin-bottom: 20px; }
   .doc-filas { row-gap: 0; }
@@ -913,7 +917,9 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
       <label class="soltar" for="img-archivo" id="img-soltar">Arrastra una imagen aquí<br>o pégala con Ctrl+V</label>
       <label for="img-modo">Cómo dibujarla
         <select id="img-modo">
-          <option value="medios">Medios bloques ▀ (el más fiel)</option>
+          <option value="cuartos">Cuartos ▖▞▟ (el más fiel)</option>
+          <option value="medios">Medios bloques ▀</option>
+          <option value="forma">Letras por su forma (arte ASCII bueno)</option>
           <option value="bloques">Sombras ░▒▓█</option>
           <option value="simple">Letras simples  .:-=+*#%@</option>
           <option value="detallado">Letras detalladas (70)</option>
@@ -936,6 +942,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
     </div>
     <div class="dlg-vista" id="img-vista"><p>Aquí verás el resultado.</p></div>
   </div>
+  <p class="img-nota">¿La quieres con todos sus colores en tu programa? <code>pantalla.imagen("foto.jpg")</code> la enseña tal cual en la terminal.</p>
   <div class="dlg-pie"><small id="img-info">Sin imagen todavía.</small><button class="boton principal" id="img-insertar" disabled>Poner en la terminal</button></div>
 </dialog>
 
@@ -1757,6 +1764,7 @@ function dibujarElemento(P, e, editor) {
     case "caja": dibujarCaja(P, e.x, e.y, e.ancho, e.alto, e.estilo || "simple", est, e.titulo, e.relleno ? " " : false); break;
     case "texto": String(e.texto ?? "").split("\n").forEach((l, k) => poner(P, xTexto(e, l, W), e.y + k, l, est)); break;
     case "tabla": dibujarTabla(P, e); break;
+    case "celdas": (e.filas || []).forEach((f, k) => f.forEach(([c, fg, bg], i) => ponerCelda(P, e.x + i, e.y + k, c, { fg, bg }))); break;
     case "mensaje": dibujarMensaje(P, e); break;
     case "matriz": dibujarMatriz(P, e); break;
     case "spinner": {
@@ -4299,21 +4307,69 @@ const Imagen = (() => {
       info(`No he podido abrir «${nombre}». Prueba con otra imagen o guárdala como PNG.`, true);
     }
   }
+  // a la mitad cada vez: si se encoge de golpe, el navegador se salta píxeles y sale con dientes
+  function muestrear(fuente, w0, h0, W, H) {
+    let cv = document.createElement("canvas"), cw = w0, ch = h0;
+    cv.width = cw; cv.height = ch;
+    let cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.drawImage(fuente, 0, 0, cw, ch);
+    while (cw / 2 >= W && ch / 2 >= H) {
+      const nw = Math.max(W, Math.floor(cw / 2)), nh = Math.max(H, Math.floor(ch / 2));
+      const c2 = document.createElement("canvas"); c2.width = nw; c2.height = nh;
+      const x2 = c2.getContext("2d", { willReadFrequently: true });
+      x2.imageSmoothingQuality = "high";
+      x2.drawImage(cv, 0, 0, cw, ch, 0, 0, nw, nh);
+      cv = c2; cx = x2; cw = nw; ch = nh;
+    }
+    const fin = document.createElement("canvas"); fin.width = W; fin.height = H;
+    const xf = fin.getContext("2d", { willReadFrequently: true });
+    xf.imageSmoothingQuality = "high";
+    xf.drawImage(cv, 0, 0, cw, ch, 0, 0, W, H);
+    return xf.getImageData(0, 0, W, H).data;
+  }
+  const PALETA = RGB_COLORES.map(([n, r, g, b]) => ({ n, r, g, b, c: CODIGO_DE[n] }));
+  const cercano = (r, g, b) => {
+    let mejor = PALETA[0], dmin = Infinity;
+    for (const q of PALETA) {
+      const rm = (r + q.r) / 2;
+      const d = (2 + rm / 256) * (r - q.r) ** 2 + 4 * (g - q.g) ** 2 + (2 + (255 - rm) / 256) * (b - q.b) ** 2;
+      if (d < dmin) { dmin = d; mejor = q; }
+    }
+    return mejor;
+  };
+  const CUARTOS = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█";
+  const media = ps => [ps.reduce((t, p) => t + p.r, 0) / ps.length, ps.reduce((t, p) => t + p.g, 0) / ps.length, ps.reduce((t, p) => t + p.b, 0) / ps.length];
+  // la "forma" de cada letra: cuánta tinta tiene en 6 sitios (2 columnas x 3 filas)
+  let FORMAS = null;
+  function formas() {
+    if (FORMAS) return FORMAS;
+    const w = 12, h = 24, cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d", { willReadFrequently: true });
+    const lista = [];
+    for (let k = 32; k < 127; k++) {
+      const c = String.fromCharCode(k);
+      cx.fillStyle = "#000"; cx.fillRect(0, 0, w, h);
+      cx.fillStyle = "#fff"; cx.font = `${h * 0.78}px "JetBrains Mono", "Cascadia Mono", Consolas, monospace`;
+      cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText(c, w / 2, h / 2 + 1);
+      const d = cx.getImageData(0, 0, w, h).data, v = [0, 0, 0, 0, 0, 0];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) v[Math.min(2, Math.floor(y / (h / 3))) * 2 + (x < w / 2 ? 0 : 1)] += d[(y * w + x) * 4];
+      lista.push({ c, v: v.map(t => t / (255 * w * h / 6)) });
+    }
+    const max = Math.max(...lista.flatMap(f => f.v)) || 1;
+    lista.forEach(f => { f.v = f.v.map(t => t / max); });
+    return (FORMAS = lista);
+  }
   function convertir() {
     if (!img) return;
     const modo = ctl("img-modo").value, color = ctl("img-color").value === "color";
     const cols = +ctl("img-ancho").value;
     const brillo = +ctl("img-brillo").value / 100, contraste = +ctl("img-contraste").value / 100;
     const invertir = ctl("img-invertir").checked, tramar = ctl("img-tramar").checked;
-    const sx = modo === "braille" ? 2 : 1;
-    const sy = modo === "braille" ? 4 : modo === "medios" ? 2 : 1;
+    const sx = modo === "braille" || modo === "cuartos" || modo === "forma" ? 2 : 1;
+    const sy = modo === "braille" ? 4 : modo === "medios" || modo === "cuartos" ? 2 : modo === "forma" ? 3 : 1;
     const filas = Math.max(1, Math.round(cols * (img.h / img.w) * 0.5));
     const W = cols * sx, H = filas * sy;
-    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-    const cx = cv.getContext("2d", { willReadFrequently: true });
-    cx.imageSmoothingQuality = "high";
-    cx.drawImage(img.fuente, 0, 0, W, H);
-    const d = cx.getImageData(0, 0, W, H).data;
+    const d = muestrear(img.fuente, Math.min(img.w, W * 8), Math.min(img.h, H * 8), W, H);
     const k = (1 + contraste) / (1 - Math.min(0.99, contraste));
     const px = [];
     for (let i = 0; i < W * H; i++) {
@@ -4323,7 +4379,7 @@ const Imagen = (() => {
       r = aj(r); g = aj(g); b = aj(b);
       px.push({ r: r * 255, g: g * 255, b: b * 255, l: 0.2126 * r + 0.7152 * g + 0.0722 * b, a });
     }
-    if (tramar && !color && (modo === "braille" || modo === "medios")) {
+    if (tramar && !color && (modo === "braille" || modo === "medios" || modo === "cuartos")) {
       const lum = px.map(p => p.l);
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
         const i = y * W + x, viejo = lum[i], nuevo = viejo > 0.5 ? 1 : 0, err = viejo - nuevo;
@@ -4333,17 +4389,94 @@ const Imagen = (() => {
       }
       px.forEach((p, i) => p.t = lum[i]);
     }
+    // con colores: el error se reparte entre los vecinos (Floyd-Steinberg) y así salen los tonos de en medio
+    if (tramar && color && modo === "cuartos") {
+      const R = px.map(p => p.r), G = px.map(p => p.g), B = px.map(p => p.b);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (px[i].a <= 0.5) continue;
+        const q = cercano(R[i], G[i], B[i]);
+        px[i].q = q;
+        const er = [R[i] - q.r, G[i] - q.g, B[i] - q.b].map(e => e * 0.6);
+        const dar = (j, f) => { if (px[j].a > 0.5) { R[j] += er[0] * f; G[j] += er[1] * f; B[j] += er[2] * f; } };
+        if (x + 1 < W) dar(i + 1, 7 / 16);
+        if (y + 1 < H) { if (x > 0) dar(i + W - 1, 3 / 16); dar(i + W, 5 / 16); if (x + 1 < W) dar(i + W + 1, 1 / 16); }
+      }
+    }
+    let estirar = v => v;
+    if (modo === "forma" || modo === "simple" || modo === "detallado" || modo === "bloques") {
+      // el contraste estirado: si no, una foto normal sale casi toda con las mismas dos letras
+      const ls = px.filter(p => p.a > 0.5).map(p => p.l).sort((a, b) => a - b);
+      if (ls.length) {
+        const lo = ls[Math.floor(ls.length * 0.02)], hi = ls[Math.floor(ls.length * 0.98)];
+        if (hi - lo > 0.05) estirar = v => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+      }
+    }
     const lineas = [], colores = [], fondos = [];
     const nombreDe = p => colorCercano(p.r, p.g, p.b);
+    const FS = modo === "forma" ? formas() : null;
+    const dist = (q, p) => (p.r - q.r) ** 2 + (p.g - q.g) ** 2 + (p.b - q.b) ** 2;
     for (let fy = 0; fy < filas; fy++) {
       let L = "", C = "", F = "";
       for (let fx = 0; fx < cols; fx++) {
-        if (modo === "medios") {
+        if (modo === "cuartos") {
+          const sub = [px[(fy * 2) * W + fx * 2], px[(fy * 2) * W + fx * 2 + 1], px[(fy * 2 + 1) * W + fx * 2], px[(fy * 2 + 1) * W + fx * 2 + 1]];
+          const vis = sub.map(p => p.a > 0.5);
+          if (!vis.some(Boolean)) { L += " "; C += "."; F += "."; continue; }
+          if (!color) {
+            let m = 0;
+            sub.forEach((p, j) => { if (vis[j] && (p.t !== undefined ? p.t > 0.5 : p.l > 0.5)) m |= 1 << j; });
+            L += CUARTOS[m]; C += "."; F += "."; continue;
+          }
+          // se prueban todas las formas de partir los 4 trocitos en dos colores y se queda la que menos se nota
+          const de = ps => {
+            if (!ps.length) return null;
+            if (ps[0].q) {
+              const cuenta = new Map();
+              ps.forEach(p => cuenta.set(p.q, (cuenta.get(p.q) || 0) + 1));
+              return [...cuenta].sort((a, b) => b[1] - a[1])[0][0];
+            }
+            return cercano(...media(ps));
+          };
+          let mejor = null;
+          for (let m = 1; m < 16; m++) {
+            if (vis.some((v, j) => !v && (m >> j) & 1)) continue;
+            const a = sub.filter((p, j) => vis[j] && (m >> j) & 1), b = sub.filter((p, j) => vis[j] && !((m >> j) & 1));
+            const qa = de(a), qb = de(b);
+            let e = 0;
+            a.forEach(p => { e += dist(qa, p); });
+            b.forEach(p => { e += dist(qb, p); });
+            if (!mejor || e < mejor.e - 1e-6) mejor = { e, m, qa, qb };
+          }
+          const { m, qa, qb } = mejor;
+          if (!qb || qa === qb) {
+            // todo de un color (o lo que falta es transparente)
+            L += qb ? "█" : CUARTOS[m]; C += qa.c; F += ".";
+          } else if (vis.every(Boolean)) { L += CUARTOS[m]; C += qa.c; F += qb.c; }
+          else { L += CUARTOS[m]; C += qa.c; F += "."; }
+        } else if (modo === "forma") {
+          const sub = [];
+          for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 2; dx++) sub.push(px[(fy * 3 + dy) * W + fx * 2 + dx]);
+          if (sub.every(p => p.a <= 0.5)) { L += " "; C += "."; F += "."; continue; }
+          let v = sub.map(p => p.a > 0.5 ? estirar(p.l) : 0);
+          // un poco más de contraste dentro de cada letra, para que se noten los bordes
+          const mx = Math.max(...v);
+          if (mx > 0) v = v.map(t => Math.pow(t / mx, 1.6) * mx);
+          let mejor = FS[0], dmin = Infinity;
+          for (const f of FS) {
+            let dd = 0;
+            for (let j = 0; j < 6; j++) dd += (f.v[j] - v[j]) ** 2;
+            if (dd < dmin) { dmin = dd; mejor = f; }
+          }
+          L += mejor.c;
+          C += color && mejor.c !== " " ? CODIGO_DE[colorCercano(...media(sub.filter(p => p.a > 0.5)), true)] : ".";
+          F += ".";
+        } else if (modo === "medios") {
           const a = px[(fy * 2) * W + fx], b = px[(fy * 2 + 1) * W + fx];
           const va = a.a > 0.5, vb = b.a > 0.5;
           if (color) {
             if (!va && !vb) { L += " "; C += "."; F += "."; continue; }
-            const ca = va ? CODIGO_DE[nombreDe(a)] : null, cb = vb ? CODIGO_DE[nombreDe(b)] : null;
+            const ca = va ? (a.q ? a.q.c : CODIGO_DE[nombreDe(a)]) : null, cb = vb ? (b.q ? b.q.c : CODIGO_DE[nombreDe(b)]) : null;
             if (va && vb && ca === cb) { L += "█"; C += ca; F += "."; }
             else if (va && vb) { L += "▀"; C += ca; F += cb; }
             else if (va) { L += "▀"; C += ca; F += "."; }
@@ -4368,7 +4501,7 @@ const Imagen = (() => {
           const p = px[fy * W + fx];
           const rampa = RAMPAS[modo];
           if (p.a < 0.5) { L += " "; C += "."; F += "."; continue; }
-          const lum = color ? Math.max(p.l, 0.15) : p.l;
+          const l = estirar(p.l), lum = color ? Math.max(l, 0.15) : l;
           const ch = letras(rampa)[Math.min(letras(rampa).length - 1, Math.floor(lum * letras(rampa).length))];
           L += ch;
           C += color && ch !== " " ? CODIGO_DE[colorCercano(p.r, p.g, p.b, true)] : "."; F += ".";
@@ -5327,7 +5460,999 @@ const Docs = (() => {
     return { filas, ancho: clases.length * (w + 1) - 1, alto: filas.length };
   }
 
+  // espacio en 3d: lo mismo que espacio.py y visor.py, para la web
+  const E3 = (() => {
+    // fracciones exactas, como Fraction
+    const mcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+    const Q = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = mcd(n, d) || 1; return { n: (n / g) || 0, d: d / g }; };
+    const suma = (a, b) => Q(a.n * b.d + b.n * a.d, a.d * b.d), resta = (a, b) => Q(a.n * b.d - b.n * a.d, a.d * b.d);
+    const por = (a, b) => Q(a.n * b.n, a.d * b.d), entre = (a, b) => Q(a.n * b.d, a.d * b.n);
+    const cero = a => a.n === 0, num = a => a.n / a.d;
+    const txt = a => a.d === 1 ? String(a.n) : `${a.n}/${a.d}`;
+    const tv = v => "(" + v.map(txt).join(", ") + ")";
+    const pe = (a, b) => suma(suma(por(a[0], b[0]), por(a[1], b[1])), por(a[2], b[2]));
+    const px = (a, b) => [resta(por(a[1], b[2]), por(a[2], b[1])), resta(por(a[2], b[0]), por(a[0], b[2])), resta(por(a[0], b[1]), por(a[1], b[0]))];
+    const nulo = v => v.every(cero), menos = (a, b) => a.map((x, i) => resta(x, b[i]));
+    function enteros(ns) {
+      let den = 1;
+      ns.forEach(n => { den = den * n.d / mcd(den, n.d); });
+      let es = ns.map(n => n.n * (den / n.d)), g = 0;
+      es.forEach(n => { g = mcd(g, n); });
+      es = es.map(n => n / (g || 1));
+      const primero = es.find(n => n !== 0) || 1;
+      return es.map(n => Q(primero < 0 ? -n : n));
+    }
+    function lineal(ts) {
+      const partes = [];
+      ts.forEach(([n, letra]) => {
+        if (n.n === 0) return;
+        let t = txt(Q(Math.abs(n.n), n.d));
+        if (letra) t = (t.includes("/") ? `(${t})` : t === "1" ? "" : t) + letra;
+        partes.push(partes.length ? (n.n < 0 ? " - " : " + ") + t : (n.n < 0 ? "-" : "") + t);
+      });
+      return partes.join("") || "0";
+    }
+
+    // --- planos y rectas ---
+    function plano(a, b, c, d) {
+      [a, b, c, d] = enteros([a, b, c, d]);
+      const n = [a, b, c], orden = [2, 1, 0];
+      const cand = orden.filter(k => !cero(n[k])), unos = cand.filter(k => Math.abs(num(n[k])) === 1);
+      const k = unos.length ? unos[0] : cand.slice().sort((i, j) => Math.abs(num(n[i])) - Math.abs(num(n[j])) || orden.indexOf(i) - orden.indexOf(j))[0];
+      const P = [Q(0), Q(0), Q(0)];
+      P[k] = entre(Q(-d.n, d.d), n[k]);
+      return { tipo: "plano", a, b, c, d, punto: P, n };
+    }
+    const general = p => lineal([[p.a, "x"], [p.b, "y"], [p.c, "z"], [p.d, ""]]) + " = 0";
+    function segmentaria(p) {
+      if ([p.a, p.b, p.c, p.d].some(cero)) return `no tiene ecuación segmentaria (${cero(p.d) ? "pasa por el origen" : "es paralelo a algún eje"})`;
+      return ["x", "y", "z"].map((l, i) => { const t = txt(entre(Q(-p.d.n, p.d.d), p.n[i])); return `${l}/${t.includes("/") || t.startsWith("-") ? `(${t})` : t}`; }).join(" + ") + " = 1";
+    }
+    const valor = (p, P) => suma(pe(p.n, P), p.d);
+    const recta = (P, v) => ({ tipo: "recta", punto: P, vector: v });
+    const vectorial = r => `(x, y, z) = ${tv(r.punto)} + t·${tv(r.vector)}`;
+
+    // lo que se escribe
+    function limpio(t) {
+      t = t.replace(/ /g, "").replace(/−/g, "-").replace(/\*/g, "").replace(/·/g, "").replace(/\(([+-]?\d+(?:\.\d+)?\/\d+)\)/g, "$1");
+      // x/(-2) es -x/2 (sale en la segmentaria)
+      t = t.replace(/([+-]?)(\d*(?:\.\d+)?[a-zλμ])\/\(-(\d+(?:\.\d+)?)\)/g, (_, s, a, b) => (s === "-" ? "+" : "-") + a + "/" + b);
+      t = t.replace(/\/\(\+?(\d+(?:\.\d+)?)\)/g, "/$1");
+      return t.startsWith("+") ? t.slice(1) : t.replace(/=\+/g, "=");
+    }
+    function numero(s) {
+      const m = /^([+-]?)(\d+)(?:\.(\d+))?(?:\/(\d+))?$/.exec(s);
+      if (!m) throw new Error(`no entiendo el número ${s}`);
+      let q = m[3] ? Q(Number(m[2] + m[3]), 10 ** m[3].length) : Q(Number(m[2]));
+      if (m[4]) q = entre(q, Q(Number(m[4])));
+      return m[1] === "-" ? Q(-q.n, q.d) : q;
+    }
+    function lado(texto, letras) {
+      const total = {};
+      letras.concat([""]).forEach(l => { total[l] = Q(0); });
+      const trozos = texto.match(/[+-]?[^+-]+/g) || [];
+      if (!texto || trozos.join("") !== texto) throw new Error(`no entiendo ${texto}`);
+      trozos.forEach(t => {
+        const m = /^([+-]?)(\d+(?:\.\d+)?(?:\/\d+)?)?([a-zλμ]?)(?:\/(\d+(?:\.\d+)?))?$/.exec(t);
+        if (!m || (m[2] === undefined && !m[3]) || !(m[3] in total) || (m[4] && !m[3])) throw new Error(`no entiendo el trozo ${t}`);
+        let n = m[2] ? numero(m[2]) : Q(1);
+        if (m[4]) { const ab = numero(m[4]); if (cero(ab)) throw new Error("se divide entre 0"); n = entre(n, ab); }
+        total[m[3]] = m[1] === "-" ? resta(total[m[3]], n) : suma(total[m[3]], n);
+      });
+      return total;
+    }
+    function leerPlano(texto) {
+      const t = limpio(texto).replace(/,/g, ".");
+      if ((t.match(/=/g) || []).length !== 1) throw new Error("la ecuación tiene que tener un =");
+      const [i, d] = t.split("=");
+      if (!i || !d) throw new Error("falta algo a un lado del =");
+      const L = ["x", "y", "z"], a = lado(i, L), b = lado(d, L), e = {};
+      L.concat([""]).forEach(k => { e[k] = resta(a[k], b[k]); });
+      if (cero(e.x) && cero(e.y) && cero(e.z)) throw new Error("no tiene ni x, ni y, ni z, así que no es un plano");
+      return plano(e.x, e.y, e.z, e[""]);
+    }
+    const sinParentesis = t => { while (t.startsWith("(") && t.endsWith(")") && bien(t.slice(1, -1))) t = t.slice(1, -1); return t; };
+    const bien = t => { let n = 0; for (const c of t) { n += c === "(" ? 1 : c === ")" ? -1 : 0; if (n < 0) return false; } return n === 0; };
+    function leerContinua(texto) {
+      const partes = limpio(texto).replace(/,/g, ".").split("=");
+      if (partes.length !== 3 || !partes.every(Boolean)) throw new Error("la continua tiene que tener dos =");
+      const punto = {}, vector = {};
+      partes.forEach(parte => {
+        let arriba = parte, abajo = "1", nivel = 0;
+        for (let i = parte.length - 1; i >= 0; i--) {
+          const c = parte[i];
+          nivel += c === ")" ? 1 : c === "(" ? -1 : 0;
+          if (c === "/" && nivel === 0 && /[xyz]/.test(parte.slice(0, i))) { arriba = parte.slice(0, i); abajo = parte.slice(i + 1); break; }
+        }
+        arriba = sinParentesis(arriba); abajo = sinParentesis(abajo);
+        const den = numero(abajo), e = lado(arriba, ["x", "y", "z"]);
+        const ls = ["x", "y", "z"].filter(l => !cero(e[l]));
+        if (ls.length !== 1) throw new Error(`en la continua cada trozo lleva una letra, y ${parte} no`);
+        const l = ls[0];
+        if (l in punto) throw new Error(`la ${l} sale dos veces`);
+        punto[l] = entre(Q(-e[""].n, e[""].d), e[l]); vector[l] = entre(den, e[l]);
+      });
+      return [["x", "y", "z"].map(l => punto[l]), ["x", "y", "z"].map(l => vector[l])];
+    }
+    function leerParametricas(texto) {
+      const trozos = texto.replace(/\{/g, "").split(/[;,\n]/).filter(p => p.trim());
+      const punto = {}, vector = {};
+      trozos.forEach(trozo => {
+        const t = limpio(trozo);
+        if ((t.match(/=/g) || []).length !== 1) throw new Error(`no entiendo ${trozo.trim()}`);
+        const [i, d] = t.split("=");
+        if (!["x", "y", "z"].includes(i)) throw new Error("en las paramétricas cada trozo empieza por x =, y = o z =");
+        const letra = [..."tλμks"].find(l => d.includes(l)) || "t", e = lado(d, [letra]);
+        punto[i] = e[""]; vector[i] = e[letra];
+      });
+      if (Object.keys(punto).sort().join("") !== "xyz") throw new Error("en las paramétricas tienen que estar x, y y z");
+      return [["x", "y", "z"].map(l => punto[l]), ["x", "y", "z"].map(l => vector[l])];
+    }
+    function leerVectorial(texto) {
+      const ns = [];
+      for (const m of texto.matchAll(/\(([^()]*)\)/g)) {
+        const partes = m[1].split(",").map(p => p.trim());
+        if (partes.length !== 3) continue;
+        try { ns.push(partes.map(p => numero(p.replace(/ /g, "")))); } catch (e) { /* no es un número */ }
+      }
+      if (ns.length !== 2) throw new Error("escríbela así: (x, y, z) = (1, 2, 3) + t·(1, 0, 2)");
+      return ns;
+    }
+    function leerRecta(texto) {
+      const t = texto.trim(), iguales = (t.match(/=/g) || []).length;
+      const [P, v] = iguales >= 3 ? leerParametricas(t) : iguales === 2 ? leerContinua(t) : leerVectorial(t);
+      if (nulo(v)) throw new Error("el vector es (0, 0, 0) y no tiene dirección");
+      return recta(P, v);
+    }
+    function leer(texto) {
+      const t = texto.trim();
+      if (/^\(([^()=]*)\)$/.test(t)) {
+        const ps = t.slice(1, -1).split(",");
+        if (ps.length === 3) return { tipo: "punto", datos: ps.map(p => num(numero(p.replace(/ /g, "")))) };
+      }
+      const l = limpio(t);
+      if ((l.match(/=/g) || []).length !== 1 || /[tλ]/.test(l)) return leerRecta(t);
+      return leerPlano(t);
+    }
+
+    // --- posiciones y cortes ---
+    const pasa = (p, P) => cero(valor(p, P));
+    function posPlanos(p, s) {
+      if (!nulo(px(p.n, s.n))) return "se cortan";
+      return pasa(s, p.punto) ? "coincidentes" : "paralelos";
+    }
+    function posRectas(r, s) {
+      const u = r.vector, v = s.vector, w = menos(s.punto, r.punto);
+      if (nulo(px(u, v))) return nulo(px(w, u)) ? "coincidentes" : "paralelas";
+      return cero(pe(w, px(u, v))) ? "se cortan" : "se cruzan";
+    }
+    function corteRectaPlano(r, p) {
+      const vn = pe(r.vector, p.n), k = valor(p, r.punto);
+      if (cero(vn)) return null;
+      const t = entre(Q(-k.n, k.d), vn);
+      return r.punto.map((x, i) => suma(x, por(t, r.vector[i])));
+    }
+    function resolver2(a1, b1, c1, a2, b2, c2) {
+      const det = resta(por(a1, b2), por(a2, b1));
+      if (cero(det)) return null;
+      return [entre(resta(por(c1, b2), por(c2, b1)), det), entre(resta(por(a1, c2), por(a2, c1)), det)];
+    }
+    function cortePlanos(p, s) {
+      const v = px(p.n, s.n);
+      for (const z of [2, 1, 0]) {
+        const [i, j] = [0, 1, 2].filter(k => k !== z);
+        const sol = resolver2(p.n[i], p.n[j], Q(-p.d.n, p.d.d), s.n[i], s.n[j], Q(-s.d.n, s.d.d));
+        if (sol) { const P = [Q(0), Q(0), Q(0)]; P[i] = sol[0]; P[j] = sol[1]; return recta(P, enteros(v)); }
+      }
+      return null;
+    }
+    function corteRectas(r, s) {
+      const u = r.vector, v = s.vector, w = menos(s.punto, r.punto), neg = a => Q(-a.n, a.d);
+      for (const [i, j] of [[0, 1], [0, 2], [1, 2]]) {
+        const sol = resolver2(u[i], neg(v[i]), w[i], u[j], neg(v[j]), w[j]);
+        if (sol) return r.punto.map((x, k) => suma(x, por(sol[0], u[k])));
+      }
+      return null;
+    }
+
+    // --- lo que se dibuja (como en visor.py) ---
+    const NOMBRES = { plano: ["π", "σ", "ρ", "α", "β", "γ"], recta: ["r", "s", "t", "l", "m", "n"], punto: ["P", "Q", "R", "A", "B", "C", "D"] };
+    const COLORES = { plano: ["cian claro", "morado claro", "amarillo", "verde claro", "azul claro"],
+      recta: ["rojo claro", "verde claro", "naranja", "rosa", "azul claro"], punto: ["amarillo claro", "blanco", "verde claro", "rosa", "cian claro"] };
+    const RGB = { "negro": [12, 12, 12], "rojo": [205, 49, 49], "verde": [13, 188, 121], "amarillo": [229, 192, 123], "azul": [36, 114, 200],
+      "morado": [188, 63, 188], "cian": [17, 168, 205], "gris claro": [190, 190, 190], "gris": [118, 118, 118], "rojo claro": [255, 95, 109],
+      "verde claro": [110, 227, 110], "amarillo claro": [255, 230, 109], "azul claro": [97, 175, 239], "morado claro": [198, 120, 221],
+      "cian claro": [64, 214, 230], "blanco": [242, 242, 242], "naranja": [255, 140, 0], "rosa": [255, 105, 180] };
+    const CAJA = 0, EJES = 1, REJILLA = 2, BORDE = 3, CORTE = 4, LINEA = 5;
+    const redondo = x => Math.floor(x + 0.5);
+    const flo = v => v.map(num);
+    const bonitoN = x => Number.isInteger(x) ? String(x) : x.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+
+    function objetos(pares) {
+      const cosas = [], usados = {}, tomados = new Set(pares.filter(([n]) => n).map(([n]) => n));
+      pares.forEach(([nombre, o]) => {
+        if (typeof o === "string") o = leer(o);
+        const tipo = o.tipo, datos = tipo === "punto" ? o.datos : o;
+        const k = usados[tipo] || 0;
+        usados[tipo] = k + 1;
+        if (!nombre) {
+          nombre = NOMBRES[tipo].find(n => !tomados.has(n));
+          if (!nombre) { let i = 2; while (tomados.has(NOMBRES[tipo][0] + i)) i++; nombre = NOMBRES[tipo][0] + i; }
+        }
+        tomados.add(nombre);
+        cosas.push({ tipo, nombre, datos, color: COLORES[tipo][k % COLORES[tipo].length] });
+      });
+      return cosas;
+    }
+    function tamanoCaja(cosas) {
+      let m = 0;
+      cosas.forEach(c => {
+        const ps = c.tipo === "punto" ? c.datos : flo(c.datos.punto);
+        ps.forEach(n => { m = Math.max(m, Math.abs(n)); });
+      });
+      const L = Math.max(4, Math.ceil(m * 1.15));
+      return [-L, L];
+    }
+    function iguales(cosas) {
+      const igual = {};
+      cosas.forEach((c, j) => {
+        for (let i = 0; i < j; i++) {
+          if (i in igual || cosas[i].tipo !== c.tipo) continue;
+          if (c.tipo === "plano" && posPlanos(cosas[i].datos, c.datos) === "coincidentes") { igual[j] = i; break; }
+          if (c.tipo === "recta" && posRectas(cosas[i].datos, c.datos) === "coincidentes") { igual[j] = i; break; }
+        }
+      });
+      return igual;
+    }
+    const pasaF = (o, P) => o.tipo === "plano" ? Math.abs(num(o.a) * P[0] + num(o.b) * P[1] + num(o.c) * P[2] + num(o.d)) < 1e-9
+      : (() => { const w = P.map((x, i) => x - num(o.punto[i])), v = flo(o.vector);
+        return Math.abs(w[1] * v[2] - w[2] * v[1]) + Math.abs(w[2] * v[0] - w[0] * v[2]) + Math.abs(w[0] * v[1] - w[1] * v[0]) < 1e-9; })();
+    function relaciones(cosas) {
+      const lineas = [], cortes = [], rectasCorte = [], igual = iguales(cosas);
+      for (let i = 0; i < cosas.length; i++) for (let j = i + 1; j < cosas.length; j++) {
+        if ((i in igual || j in igual) && igual[j] !== i) continue;
+        let a = cosas[i], b = cosas[j];
+        if (a.tipo === "plano" && b.tipo === "recta") [a, b] = [b, a];
+        const ta = a.tipo, tb = b.tipo, na = a.nombre, nb = b.nombre;
+        if (ta === "recta" && tb === "plano") {
+          const P = corteRectaPlano(a.datos, b.datos);
+          if (P) { cortes.push(flo(P)); lineas.push(`${na} corta a ${nb} en ${tv(P)}`); }
+          else lineas.push(`${na} ${pasa(b.datos, a.datos.punto) ? "está dentro de" : "es paralela a"} ${nb}`);
+        } else if (ta === "recta" && tb === "recta") {
+          const tipo = posRectas(a.datos, b.datos);
+          if (tipo === "se cortan") { const P = corteRectas(a.datos, b.datos); cortes.push(flo(P)); lineas.push(`${na} y ${nb} se cortan en ${tv(P)}`); }
+          else lineas.push(`${na} y ${nb} ${{ coincidentes: "son la misma recta", paralelas: "son paralelas", "se cruzan": "se cruzan (no se tocan)" }[tipo]}`);
+        } else if (ta === "plano" && tb === "plano") {
+          const tipo = posPlanos(a.datos, b.datos);
+          if (tipo === "se cortan") { const r = cortePlanos(a.datos, b.datos); rectasCorte.push([r, i, j]); lineas.push(`${na} y ${nb} se cortan en la recta ${vectorial(r)}`); }
+          else lineas.push(`${na} y ${nb} ${tipo === "coincidentes" ? "son el mismo plano" : "son paralelos"}`);
+        } else if (ta === "punto" && tb !== "punto") {
+          if (pasaF(b.datos, a.datos)) lineas.push(`${na} está en ${nb}`);
+        } else if (tb === "punto" && ta !== "punto") {
+          if (pasaF(a.datos, b.datos)) lineas.push(`${nb} está en ${na}`);
+        }
+      }
+      return [lineas, cortes, rectasCorte];
+    }
+    function recortar(P, v, lo, hi) {
+      let t0 = -1e18, t1 = 1e18;
+      for (let i = 0; i < 3; i++) {
+        if (Math.abs(v[i]) < 1e-12) { if (P[i] < lo - 1e-9 || P[i] > hi + 1e-9) return null; continue; }
+        const a = (lo - P[i]) / v[i], b = (hi - P[i]) / v[i];
+        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
+      }
+      if (t0 > t1 + 1e-12) return null;
+      return [P.map((x, i) => x + t0 * v[i]), P.map((x, i) => x + t1 * v[i])];
+    }
+    function aristas(lo, hi) {
+      const e = [];
+      for (const x of [lo, hi]) for (const y of [lo, hi]) for (const z of [lo, hi]) e.push([x, y, z]);
+      const r = [];
+      for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if ([0, 1, 2].filter(k => e[i][k] !== e[j][k]).length === 1) r.push([e[i], e[j]]);
+      return r;
+    }
+    function poligonoPlano(n, d, lo, hi) {
+      const ps = [], tol = 1e-9 * (hi - lo + 1);
+      const meter = p => { if (!ps.some(q => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]) < tol)) ps.push(p); };
+      aristas(lo, hi).forEach(([A, B]) => {
+        const fa = n[0] * A[0] + n[1] * A[1] + n[2] * A[2] + d, fb = n[0] * B[0] + n[1] * B[1] + n[2] * B[2] + d;
+        if (Math.abs(fa) < 1e-12) meter(A);
+        if (Math.abs(fb) < 1e-12) meter(B);
+        if (fa * fb < 0 && Math.abs(fa) >= 1e-12 && Math.abs(fb) >= 1e-12) { const t = fa / (fa - fb); meter([0, 1, 2].map(k => A[k] + (B[k] - A[k]) * t)); }
+      });
+      if (ps.length < 3) return [];
+      const c = [0, 1, 2].map(k => ps.reduce((s, p) => s + p[k], 0) / ps.length);
+      const m = Math.hypot(...n), nn = n.map(x => x / m);
+      const otro = Math.abs(nn[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+      const cr = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+      const e1 = cr(nn, otro), e2 = cr(nn, e1);
+      const ang = p => { const w = p.map((x, k) => x - c[k]); return Math.atan2(w[0] * e2[0] + w[1] * e2[1] + w[2] * e2[2], w[0] * e1[0] + w[1] * e1[1] + w[2] * e1[2]); };
+      return ps.map(p => [ang(p), p]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    }
+    function pasoRejilla(lado) {
+      const x = lado / 4;
+      let k = 1;
+      for (;;) { for (const m of [1, 2, 5]) if (m * k >= x - 1e-9) return m * k; k *= 10; }
+    }
+    function geometria(cosas, lo, hi, caja, ejes, cortes) {
+      const g = { rayas: [], caras: [], discos: [], pies: [], rombos: [], puntas: [], nombres: [], ejes: [] }, lado = hi - lo;
+      const raya = (A, B, color, capa, estilo = "lisa", propios = []) => g.rayas.push([A, B, color, capa, estilo, propios]);
+      if (caja) aristas(lo, hi).forEach(([A, B]) => raya(A, B, "gris", CAJA, "puntos"));
+      if (ejes) {
+        const O = [0, 0, 0].map(() => Math.min(Math.max(0, lo), hi)), extra = lado * 0.09;
+        "xyz".split("").forEach((letra, k) => {
+          const fin = O.slice(); fin[k] = hi + extra;
+          raya(O, fin, "gris claro", EJES);
+          if (lo < O[k]) { const atras = O.slice(); atras[k] = lo; raya(O, atras, "gris", EJES, "puntos"); }
+          g.puntas.push([O.slice(), fin, "gris claro", EJES]);
+          const sitio = O.slice(); sitio[k] = hi + extra * 1.9;
+          g.ejes.push([sitio, letra]);
+        });
+      }
+      const [rel, puntosCorte, rectasCorte] = cortes ? relaciones(cosas) : [[], [], []];
+      const igual = iguales(cosas), juntos = {};
+      Object.keys(igual).map(Number).sort((a, b) => a - b).forEach(j => { (juntos[igual[j]] = juntos[igual[j]] || []).push(j); });
+      const nombreDe = i => {
+        let texto = cosas[i].nombre, cols = Array(letras(texto).length).fill(cosas[i].color);
+        (juntos[i] || []).forEach(j => { texto += " = " + cosas[j].nombre; cols = cols.concat(["gris claro", "gris claro", "gris claro"], Array(letras(cosas[j].nombre).length).fill(cosas[j].color)); });
+        return [texto, cols];
+      };
+      const paso = pasoRejilla(lado);
+      cosas.forEach((c, j) => {
+        if (c.tipo !== "plano") return;
+        const d = c.datos, n = [num(d.a), num(d.b), num(d.c)], poli = poligonoPlano(n, num(d.d), lo, hi);
+        if (!poli.length) return;
+        if (j in igual) { poli.forEach((p, k) => raya(p, poli[(k + 1) % poli.length], c.color, BORDE + 0.5, "guiones", [j, igual[j]])); return; }
+        g.caras.push([poli, c.color, j]);
+        [0, 1, 2].sort((a, b) => Math.abs(n[a]) - Math.abs(n[b]) || a - b).slice(0, 2).forEach(eje => {
+          for (let k = Math.ceil(lo / paso) * paso; k < hi - 1e-9; k += paso) {
+            if (k <= lo + 1e-9) continue;
+            const cruces = [];
+            poli.forEach((A, i) => {
+              const B = poli[(i + 1) % poli.length], fa = A[eje] - k, fb = B[eje] - k;
+              if ((fa < 0) !== (fb < 0) && Math.abs(fa - fb) > 1e-12) { const s = fa / (fa - fb); cruces.push([0, 1, 2].map(m => A[m] + (B[m] - A[m]) * s)); }
+            });
+            if (cruces.length >= 2) raya(cruces[0], cruces[1], c.color, REJILLA, "fina", [j]);
+          }
+        });
+        poli.forEach((p, i) => raya(p, poli[(i + 1) % poli.length], c.color, BORDE, "lisa", [j].concat(juntos[j] || [])));
+        const [texto, cols] = nombreDe(j);
+        g.nombres.push(["plano", poli, texto, cols]);
+      });
+      rectasCorte.forEach(([r, i, j]) => { const t = recortar(flo(r.punto), flo(r.vector), lo, hi); if (t) raya(t[0], t[1], "blanco", CORTE, "lisa", [i, j]); });
+      cosas.forEach((c, j) => {
+        const d = c.datos, color = c.color;
+        if (c.tipo === "recta") {
+          const t = recortar(flo(d.punto), flo(d.vector), lo, hi);
+          if (t && j in igual) raya(t[0], t[1], color, LINEA + 0.5, "gruesa_guiones");
+          else if (t) { raya(t[0], t[1], color, LINEA, "gruesa"); const [texto, cols] = nombreDe(j); g.nombres.push(["recta", t, texto, cols]); }
+        } else if (c.tipo === "punto") {
+          // como en el libro: baja hasta el suelo y desde ahí va a los ejes x e y
+          if (lo <= 0 && 0 <= hi) {
+            const pie = [d[0], d[1], 0];
+            if (Math.abs(d[2]) > 1e-9) raya(d, pie, color, REJILLA, "guia");
+            if (Math.abs(d[0]) > 1e-9 && Math.abs(d[1]) > 1e-9) { raya(pie, [d[0], 0, 0], color, REJILLA, "guia"); raya(pie, [0, d[1], 0], color, REJILLA, "guia"); }
+            if (Math.abs(d[2]) > 1e-9 && (Math.abs(d[0]) > 1e-9 || Math.abs(d[1]) > 1e-9)) g.pies.push([pie, color]);
+          }
+          g.discos.push([d, color]);
+          g.nombres.push(["punto", d, `${c.nombre}(${d.map(bonitoN).join(", ")})`, color]);
+        }
+      });
+      puntosCorte.forEach(P => { if (P.every(x => lo - 1e-9 <= x && x <= hi + 1e-9)) g.rombos.push(P); });
+      return [g, rel];
+    }
+    function camara(W, H, giro, inc, zoom, lo, hi) {
+      const th = giro * Math.PI / 180, ph = inc * Math.PI / 180;
+      const r = [-Math.sin(th), Math.cos(th), 0], u = [-Math.sin(ph) * Math.cos(th), -Math.sin(ph) * Math.sin(th), Math.cos(ph)];
+      const dd = [Math.cos(ph) * Math.cos(th), Math.cos(ph) * Math.sin(th), Math.sin(ph)];
+      const c = (lo + hi) / 2, s = zoom * Math.min(W, H) / ((hi - lo) * Math.sqrt(3) * 1.02), cx = W / 2, cy = H / 2;
+      return P => {
+        const x = P[0] - c, y = P[1] - c, z = P[2] - c;
+        return [cx + s * (x * r[0] + y * r[1] + z * r[2]), cy - s * (x * u[0] + y * u[1] + z * u[2]), x * dd[0] + y * dd[1] + z * dd[2]];
+      };
+    }
+    function sitioNombre(tipo, datos, cam) {
+      if (tipo === "plano") { let mejor = datos[0], v = -Infinity; datos.forEach(p => { const q = cam(p), w = q[0] - q[1] * 0.5; if (w > v) { v = w; mejor = p; } }); return [cam(mejor).slice(0, 2), true]; }
+      if (tipo === "recta") { const a = cam(datos[0]), b = cam(datos[1]); return [(b[0] > a[0] || (b[0] === a[0] && -b[1] >= -a[1]) ? b : a).slice(0, 2), true]; }
+      return [cam(datos).slice(0, 2), true];
+    }
+    const sitios = (c, f, n, derecha) => {
+      const s = [[c + 1, f], [c - n, f], [c + 1, f - 1], [c - n, f - 1], [c + 1, f + 1], [c - n, f + 1], [c, f - 1]];
+      if (!derecha) [s[0], s[1]] = [s[1], s[0]];
+      return s;
+    };
+
+    // --- con puntitos braille ---
+    const BRAILLE = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]];
+    function conBraille(g, cols, filas, cam) {
+      const W = cols * 2, H = filas * 4, capas = Array(cols * filas).fill(null), letrasC = new Map(), fondo = Array(cols * filas).fill(null);
+      const punto = (x, y, color, prio, prof) => {
+        if (x < 0 || y < 0 || x >= W || y >= H) return;
+        const i = (y >> 2) * cols + (x >> 1), bit = BRAILLE[x & 1][y & 3], cs = capas[i];
+        if (!cs) { capas[i] = [[color, prio, prof, bit]]; return; }
+        for (const c of cs) if (c[0] === color) { c[3] |= bit; if (prio > c[1] || (prio === c[1] && prof > c[2])) { c[1] = prio; c[2] = prof; } return; }
+        cs.push([color, prio, prof, bit]);
+      };
+      const arriba = i => { const cs = capas[i]; if (!cs) return null; let m = cs[0]; cs.slice(1).forEach(c => { if (c[1] > m[1] || (c[1] === m[1] && c[2] > m[2])) m = c; }); return m; };
+      const raya = (a, b, color, prio, patron) => {
+        const n = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]))));
+        for (let k = 0; k <= n; k++) {
+          if (patron && k % (patron[0] + patron[1]) >= patron[0]) continue;
+          const t = k / n;
+          punto(redondo(a[0] + (b[0] - a[0]) * t), redondo(a[1] + (b[1] - a[1]) * t), color, prio, a[2] + (b[2] - a[2]) * t);
+        }
+      };
+      const letra = (c, f, ch, color, prio) => {
+        if (c < 0 || c >= cols || f < 0 || f >= filas) return;
+        const antes = letrasC.get(f * cols + c);
+        if (!antes || antes[2] <= prio) letrasC.set(f * cols + c, [ch, color, prio]);
+      };
+      const libre = (c, f, n) => {
+        if (f < 0 || f >= filas || c < 0 || c + n > cols) return false;
+        for (let k = c; k < c + n; k++) { const cp = arriba(f * cols + k); if (letrasC.has(f * cols + k) || (cp && cp[1] >= BORDE)) return false; }
+        return true;
+      };
+      const PAT = { lisa: null, gruesa: null, fina: null, puntos: [1, 2], guiones: [3, 3], gruesa_guiones: [3, 3], guia: [1, 2] };
+      g.caras.forEach(([poli, color]) => {
+        const pts = poli.map(cam), [r, gg, b] = RGB[color];
+        for (let f = 0; f < filas; f++) {
+          const yc = f * 4 + 2, xs = [];
+          pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; if ((p[1] <= yc && yc < q[1]) || (q[1] <= yc && yc < p[1])) xs.push(p[0] + (yc - p[1]) * (q[0] - p[0]) / (q[1] - p[1])); });
+          if (xs.length < 2) continue;
+          const c0 = Math.ceil(Math.min(...xs) / 2 - 0.5), c1 = Math.ceil(Math.max(...xs) / 2 - 0.5);
+          for (let c = Math.max(0, c0); c < Math.min(cols, c1); c++) {
+            const i = f * cols + c, antes = fondo[i], nuevo = [r * 0.22, gg * 0.22, b * 0.22];
+            fondo[i] = antes ? antes.map((v, k) => v + nuevo[k]) : nuevo;
+          }
+        }
+      });
+      g.rayas.forEach(([A, B, color, capa, estilo]) => raya(cam(A), cam(B), color, capa, PAT[estilo]));
+      const celda = P => { const q = cam(P); return [redondo(q[0]) >> 1, redondo(q[1]) >> 2]; };
+      g.ejes.forEach(([P, l]) => { const [c, f] = celda(P); letra(Math.min(Math.max(c, 0), cols - 1), Math.min(Math.max(f, 0), filas - 1), l, "blanco", 6); });
+      g.rombos.forEach(P => { const [c, f] = celda(P); letra(c, f, "◆", "blanco", 6); });
+      g.discos.forEach(([P, color]) => { const [c, f] = celda(P); letra(c, f, "●", color, 6); });
+      g.nombres.forEach(([tipo, datos, texto, color]) => {
+        const [[x, y], derecha] = sitioNombre(tipo, datos, cam), c = redondo(x) >> 1, f = redondo(y) >> 2, ls = letras(texto);
+        const cs = Array.isArray(color) ? color : Array(ls.length).fill(color);
+        for (const [sc, sf] of sitios(c, f, ls.length, derecha)) if (libre(sc, sf, ls.length)) { ls.forEach((ch, k) => letra(sc + k, sf, ch, cs[k], 7)); break; }
+      });
+      const hex = v => "#" + v.map(x => Math.min(255, Math.floor(x)).toString(16).padStart(2, "0")).join("");
+      const filasS = [];
+      for (let f = 0; f < filas; f++) {
+        const fila = [];
+        for (let c = 0; c < cols; c++) {
+          const i = f * cols + c, bg = fondo[i] ? hex(fondo[i]) : null;
+          if (letrasC.has(i)) { const [ch, color] = letrasC.get(i); fila.push([ch, color, bg]); }
+          else if (capas[i]) { const cp = arriba(i); fila.push([String.fromCodePoint(0x2800 | cp[3]), cp[0], bg]); }
+          else fila.push([" ", null, bg]);
+        }
+        filasS.push(fila);
+      }
+      return filasS;
+    }
+
+    // --- dibujo de verdad, píxel a píxel ---
+    const ESTILOS = { lisa: [1.7, 0.95, null], gruesa: [2.6, 1, null], fina: [1, 0.45, null], puntos: [1, 0.5, [2, 4]], guiones: [1.9, 1, [8, 8]], gruesa_guiones: [2.8, 1, [10, 10]], guia: [1.3, 0.9, [4, 4]] };
+    const ALFA = 0.30;
+    function conImagen(g, W, H, cam, escala, fondo) {
+      const R = new Float32Array(W * H).fill(fondo[0]), G = new Float32Array(W * H).fill(fondo[1]), B = new Float32Array(W * H).fill(fondo[2]), A = new Float32Array(W * H);
+      const planos = g.caras.map(([poli, color, indice]) => {
+        const pts = poli.map(cam), p0 = pts[0];
+        let mejor = 0, coef = null;
+        for (let i = 1; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+          const p1 = pts[i], p2 = pts[j], det = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1]);
+          if (Math.abs(det) > Math.abs(mejor)) {
+            mejor = det;
+            const a = ((p1[2] - p0[2]) * (p2[1] - p0[1]) - (p2[2] - p0[2]) * (p1[1] - p0[1])) / det;
+            const b = ((p1[0] - p0[0]) * (p2[2] - p0[2]) - (p2[0] - p0[0]) * (p1[2] - p0[2])) / det;
+            coef = [a, b, p0[2] - a * p0[0] - b * p0[1]];
+          }
+        }
+        const tramos = new Map();
+        if (coef && Math.abs(mejor) > 1) {
+          const ys = pts.map(p => p[1]);
+          for (let y = Math.max(0, Math.floor(Math.min(...ys))); y < Math.min(H, Math.ceil(Math.max(...ys)) + 1); y++) {
+            const yc = y + 0.5, xs = [];
+            pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; if ((p[1] <= yc && yc < q[1]) || (q[1] <= yc && yc < p[1])) xs.push(p[0] + (yc - p[1]) * (q[0] - p[0]) / (q[1] - p[1])); });
+            if (xs.length >= 2) { const x0 = Math.max(0, Math.ceil(Math.min(...xs) - 0.5)), x1 = Math.min(W, Math.ceil(Math.max(...xs) - 0.5)); if (x1 > x0) tramos.set(y, [x0, x1]); }
+          }
+        }
+        return { coef, tramos, rgb: RGB[color], indice };
+      });
+      // los planos, transparentes y del más lejano al más cercano
+      for (let y = 0; y < H; y++) {
+        const activos = planos.filter(p => p.tramos.has(y));
+        if (!activos.length) continue;
+        const yc = y + 0.5, cortes = new Set();
+        activos.forEach(p => p.tramos.get(y).forEach(x => cortes.add(x)));
+        for (let i = 0; i < activos.length; i++) for (let j = i + 1; j < activos.length; j++) {
+          const [a1, b1, c1] = activos[i].coef, [a2, b2, c2] = activos[j].coef;
+          if (Math.abs(a1 - a2) > 1e-12) { const x = -((b1 - b2) * yc + (c1 - c2)) / (a1 - a2); if (x > 0 && x < W) cortes.add(Math.ceil(x - 0.5)); }
+        }
+        const cs = [...cortes].sort((a, b) => a - b);
+        for (let k = 0; k < cs.length - 1; k++) {
+          const xa = cs[k], xb = cs[k + 1];
+          if (xb <= xa) continue;
+          const xm = (xa + xb) / 2, encima = activos.filter(p => p.tramos.get(y)[0] <= xa && xb <= p.tramos.get(y)[1]);
+          if (!encima.length) continue;
+          encima.sort((p, q) => (p.coef[0] * xm + p.coef[1] * yc + p.coef[2]) - (q.coef[0] * xm + q.coef[1] * yc + q.coef[2]));
+          let r = fondo[0], gg = fondo[1], b = fondo[2], a = 0;
+          encima.forEach(p => { r += (p.rgb[0] - r) * ALFA; gg += (p.rgb[1] - gg) * ALFA; b += (p.rgb[2] - b) * ALFA; a += (1 - a) * ALFA; });
+          R.fill(r, y * W + xa, y * W + xb); G.fill(gg, y * W + xa, y * W + xb); B.fill(b, y * W + xa, y * W + xb); A.fill(a, y * W + xa, y * W + xb);
+        }
+      }
+      const pintar = (x, y, rgb, alfa) => {
+        if (alfa <= 0.003 || x < 0 || y < 0 || x >= W || y >= H) return;
+        if (alfa > 1) alfa = 1;
+        const i = y * W + x;
+        R[i] += (rgb[0] - R[i]) * alfa; G[i] += (rgb[1] - G[i]) * alfa; B[i] += (rgb[2] - B[i]) * alfa; A[i] += (1 - A[i]) * alfa;
+      };
+      const tapado = (x, y, z, propios) => {
+        let f = 1;
+        planos.forEach(p => {
+          if (propios.includes(p.indice)) return;
+          const t = p.tramos.get(y);
+          if (t && t[0] <= x && x < t[1] && p.coef[0] * (x + 0.5) + p.coef[1] * (y + 0.5) + p.coef[2] > z + 1e-6) f *= 1 - ALFA * 1.6;
+        });
+        return f;
+      };
+      const raya = (PA, PB, color, estilo, propios) => {
+        const [ancho0, opac, guion0] = ESTILOS[estilo], r = ancho0 * escala / 2, rgb = RGB[color];
+        const [ax, ay, az] = cam(PA), [bx, by, bz] = cam(PB), dx = bx - ax, dy = by - ay, largo = Math.hypot(dx, dy);
+        if (largo < 1e-9) return;
+        const ux = dx / largo, uy = dy / largo, guion = guion0 && [guion0[0] * escala, guion0[1] * escala], oculta = estilo.startsWith("gruesa"), guia = estilo === "guia";
+        const muestra = (x, y) => {
+          if (x < 0 || y < 0 || x >= W || y >= H) return;
+          const wx = x + 0.5 - ax, wy = y + 0.5 - ay, s = wx * ux + wy * uy;
+          let cob = r + 0.5 - Math.abs(wx * uy - wy * ux);
+          if (s < 0) cob = Math.min(cob, r + 0.5 + s); else if (s > largo) cob = Math.min(cob, r + 0.5 - s + largo);
+          if (cob <= 0 || (guion && s % (guion[0] + guion[1]) >= guion[0])) return;
+          let f = tapado(x, y, az + (bz - az) * Math.min(Math.max(s / largo, 0), 1), propios);
+          if (oculta && f < 0.999) { if (s % (9 * escala) >= 5.5 * escala) return; f = Math.max(f, 0.6); } else if (guia) f = Math.max(f, 0.65);
+          pintar(x, y, rgb, Math.min(cob, 1) * opac * f);
+        };
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          const m = dy / dx, ext = (r + 1) * Math.hypot(1, m);
+          for (let x = Math.max(0, Math.floor(Math.min(ax, bx) - r)); x <= Math.min(W - 1, Math.ceil(Math.max(ax, bx) + r)); x++) {
+            const yl = ay + (x + 0.5 - ax) * m;
+            for (let y = Math.max(0, Math.trunc(yl - ext)); y < Math.min(H, Math.trunc(yl + ext) + 2); y++) muestra(x, y);
+          }
+        } else {
+          const m = dx / dy, ext = (r + 1) * Math.hypot(1, m);
+          for (let y = Math.max(0, Math.floor(Math.min(ay, by) - r)); y <= Math.min(H - 1, Math.ceil(Math.max(ay, by) + r)); y++) {
+            const xl = ax + (y + 0.5 - ay) * m;
+            for (let x = Math.max(0, Math.trunc(xl - ext)); x < Math.min(W, Math.trunc(xl + ext) + 2); x++) muestra(x, y);
+          }
+        }
+      };
+      g.rayas.slice().sort((a, b) => a[3] - b[3]).forEach(([PA, PB, color, , estilo, propios]) => raya(PA, PB, color, estilo, propios));
+      const punta = (PA, PB, color, largo, ancho) => {
+        const [ax, ay] = cam(PA), [bx, by, bz] = cam(PB), d = Math.hypot(bx - ax, by - ay);
+        if (d < 1e-9) return;
+        const ux = (bx - ax) / d, uy = (by - ay) / d; largo *= escala; ancho *= escala;
+        const base = [bx - ux * largo, by - uy * largo];
+        const tri = [[bx + ux * 1.5, by + uy * 1.5], [base[0] - uy * ancho, base[1] + ux * ancho], [base[0] + uy * ancho, base[1] - ux * ancho]];
+        const ar = tri.map((p, i) => { const q = tri[(i + 1) % 3], l = Math.hypot(q[0] - p[0], q[1] - p[1]); return [p[0], p[1], (q[0] - p[0]) / l, (q[1] - p[1]) / l]; });
+        const signo = ((tri[1][0] - tri[0][0]) * (tri[2][1] - tri[0][1]) - (tri[2][0] - tri[0][0]) * (tri[1][1] - tri[0][1])) > 0 ? 1 : -1;
+        const xs = tri.map(p => p[0]), ys = tri.map(p => p[1]);
+        for (let y = Math.floor(Math.min(...ys)) - 1; y < Math.ceil(Math.max(...ys)) + 1; y++) for (let x = Math.floor(Math.min(...xs)) - 1; x < Math.ceil(Math.max(...xs)) + 1; x++) {
+          const m = Math.min(...ar.map(([x1, y1, vx, vy]) => -signo * ((x + 0.5 - x1) * vy - (y + 0.5 - y1) * vx)));
+          if (m > -0.5) pintar(x, y, RGB[color], Math.min(1, m + 0.5) * tapado(x, y, bz, []));
+        }
+      };
+      g.puntas.forEach(([PA, PB, color, capa]) => punta(PA, PB, color, capa === LINEA ? 11 : 8, capa === LINEA ? 4.5 : 3.2));
+      const marca = (P, rgb, radio, rombo, borde = true) => {
+        const [cx, cy, z] = cam(P), Rr = radio * escala, f = rombo ? 1 : Math.max(tapado(Math.trunc(cx), Math.trunc(cy), z, []), 0.55);
+        for (let y = Math.floor(cy - Rr - 2); y <= Math.ceil(cy + Rr + 2); y++) for (let x = Math.floor(cx - Rr - 2); x <= Math.ceil(cx + Rr + 2); x++) {
+          const d = rombo ? (Math.abs(x + 0.5 - cx) + Math.abs(y + 0.5 - cy)) / Math.SQRT2 : Math.hypot(x + 0.5 - cx, y + 0.5 - cy), Rd = rombo ? Rr / Math.SQRT2 : Rr;
+          if (borde) pintar(x, y, fondo, Math.min(1, Math.max(0, Rd + (rombo ? 1.6 : 1.8) - d)) * 0.9);
+          pintar(x, y, rgb, Math.min(1, Math.max(0, Rd + 0.5 - d)) * f);
+        }
+      };
+      g.rombos.forEach(P => marca(P, [255, 255, 255], 5.5, true));
+      g.pies.forEach(([P, color]) => marca(P, RGB[color], 1.8, false, false));
+      g.discos.forEach(([P, color]) => marca(P, RGB[color], 4.2, false));
+      return { W, H, R, G, B, A };
+    }
+    function letrasImagen(g, img, cols, filas, cw, ch, cam) {
+      const res = [], ocupadas = new Set();
+      const ocupado = (c, f) => {
+        let t = 0, n = 0;
+        for (let y = Math.floor(f * ch); y < Math.min(img.H, Math.floor((f + 1) * ch)); y += 2) for (let x = Math.floor(c * cw); x < Math.min(img.W, Math.floor((c + 1) * cw)); x += 2) { t += img.A[y * img.W + x]; n++; }
+        return n ? t / n : 1;
+      };
+      const poner = (c, f, texto, color) => { const ls = letras(texto), cs = Array.isArray(color) ? color : Array(ls.length).fill(color); ls.forEach((x, k) => { res.push([c + k, f, x, cs[k]]); ocupadas.add((c + k) + "," + f); }); };
+      g.ejes.forEach(([P, l]) => { const [x, y] = cam(P); poner(Math.min(Math.max(Math.floor(x / cw), 0), cols - 1), Math.min(Math.max(Math.floor(y / ch), 0), filas - 1), l, "blanco"); });
+      g.nombres.forEach(([tipo, datos, texto, color]) => {
+        const [[x, y], derecha] = sitioNombre(tipo, datos, cam), c = Math.floor(x / cw), f = Math.floor(y / ch), n = letras(texto).length;
+        let mejor = null;
+        for (const [sc, sf] of sitios(c, f, n, derecha)) {
+          if (sf < 0 || sf >= filas || sc < 0 || sc + n > cols) continue;
+          if ([...Array(n).keys()].some(k => ocupadas.has((sc + k) + "," + sf))) continue;
+          const o = Math.max(...[...Array(n).keys()].map(k => ocupado(sc + k, sf)));
+          if (!mejor || o < mejor[0] - 0.05) mejor = [o, sc, sf];
+          if (o < 0.15) break;
+        }
+        if (mejor) poner(mejor[1], mejor[2], texto, color);
+      });
+      return res;
+    }
+    function partir(texto, ancho, sangria) {
+      const trozos = [];
+      while (letras(texto).length > ancho) {
+        let corte = texto.lastIndexOf(" ", ancho);
+        if (corte <= sangria) corte = ancho;
+        trozos.push(texto.slice(0, corte).replace(/\s+$/, ""));
+        texto = " ".repeat(sangria) + texto.slice(corte).replace(/^\s+/, "");
+      }
+      trozos.push(texto);
+      return trozos;
+    }
+    function textoDe(c) {
+      if (c.tipo === "plano") return general(c.datos);
+      if (c.tipo === "recta") return vectorial(c.datos);
+      return "(" + c.datos.map(bonitoN).join(", ") + ")";
+    }
+    function leyenda(cosas, rel, ancho) {
+      ancho = Math.max(12, ancho);
+      const ls = [];
+      cosas.forEach(c => partir(`${{ plano: "▰", recta: "━", punto: "●" }[c.tipo]} ${c.nombre}  ${textoDe(c)}`, ancho, 4 + letras(c.nombre).length).forEach(t => ls.push([t, c.color])));
+      rel.forEach(r => partir("· " + r, ancho, 4).forEach(t => ls.push([t, "gris claro"])));
+      return ls;
+    }
+    return { Q, txt, tv, plano, leerPlano, leer, objetos, tamanoCaja, geometria, camara, conBraille, conImagen, letrasImagen, leyenda, relaciones,
+      general, segmentaria, vectorial, enteros, lineal, RGB, posPlanos, posRectas, cortePlanos, corteRectaPlano };
+  })();
+
+  // lo que escribe python en las tarjetas de geometría del espacio (sacado de la librería tal cual)
+  const SALIDAS3D = {"plano3d": {"lineas": ["Vectorial:     (x, y, z) = (1, 0, 2) + λ·(-1, 3, -2) + μ·(0, 1, -1)", "Paramétricas:  x = 1 - λ,  y = 3λ + μ,  z = 2 - 2λ - μ", "General:       x + y + z - 3 = 0", "Normal:        n = (1, 1, 1),  (x - 1) + y + (z - 2) = 0", "Segmentaria:   x/3 + y/3 + z/3 = 1"], "res": ["x + y + z - 3 = 0"]}, "recta3d": {"lineas": ["Vectorial:     (x, y, z) = (1, 2, 3) + t·(1, 0, 2)", "Paramétricas:  x = 1 + t,  y = 2,  z = 3 + 2t", "Continua:      (x - 1)/1 = (y - 2)/0 = (z - 3)/2", "Implícitas:    y - 2 = 0,  2x - z + 1 = 0"], "res": ["(x, y, z) = (1, 2, 3) + t·(1, 0, 2)"]}, "posicion3d": {"lineas": ["     ┌            │    ┐", "     │ 1   1   1  │ 3  │", "M* = │ 1   -1  0  │ 1  │", "     │ 0   0   1  │ 2  │", "     └            │    ┘", "rango(M) = 3,  rango(M*) = 3", "Los tres planos: se cortan en un punto"], "res": ["se cortan en un punto"]}, "posicion_rectas3d": {"lineas": ["u = (1, 1, 0),  v = (0, 1, 1),  AB = B - A = (-1, 0, 1)", "rango(u, v) = 2,  rango(u, v, AB) = 2", "Las rectas se cortan"], "res": ["se cortan"]}, "distancia3d": {"lineas": ["d = |2·1 + (-1)·2 + 2·3 - 1| / √(2² + (-1)² + 2²) = 5 / 3 = 5/3", "", "Se cruzan:", "AB = (0, 1, 1),  u × v = (0, 0, 1)", "d = |[AB, u, v]| / |u × v| = 1 / 1 = 1"], "res": ["5/3", "1"]}, "angulo3d": {"lineas": ["sen α = |v · n| / (|v|·|n|) = 0 / (√2·1) = 0", "α ≈ 0°", "", "cos α = |n₁ · n₂| / (|n₁|·|n₂|) = 1 / (√2·√2) = 1/2", "α ≈ 60°"], "res": ["0.0", "60.0"]}, "proyeccion3d": {"lineas": ["La recta perpendicular al plano que pasa por P: (x, y, z) = (1, 2, 3) + t·(1, 1, 1)", "(1 + t) + (2 + t) + (3 + t) = 0  →  3t + 6 = 0  →  t = -2", "La proyección es (-1, 0, 1)", "", "M = la proyección de P en el plano = (-1, 0, 1)", "P' = 2M - P = 2·(-1, 0, 1) - (1, 2, 3) = (-3, -2, -1)"], "res": ["(-1, 0, 1)", "(-3, -2, -1)"]}, "area3d": {"lineas": ["AB = (-1, 2, 0),  AC = (-1, 0, 3),  AB × AC = (6, 3, 2)", "Área = |AB × AC| / 2 = 7 / 2 = 7/2", "", "AB = (1, 0, 0),  AC = (0, 2, 0),  AD = (0, 0, 3)", "[AB, AC, AD] = 6", "Volumen = |[AB, AC, AD]| / 6 = 6 / 6 = 1"], "res": ["7/2", "1"]}};
+  function estatica3d(claves, codigo, izq) {
+    claves = [].concat(claves);
+    const lineas = [], devuelve = [];
+    claves.forEach((k, i) => { if (i) lineas.push(""); lineas.push(...SALIDAS3D[k].lineas); devuelve.push(...SALIDAS3D[k].res); });
+    const filas = lineas.map(l => [[l, /^(d|α|Área|Volumen|La proyección|P'|Los tres|Las rectas|General)/.test(l.trim()) ? "amarillo" : null]]);
+    return { elementos: [arteDe(filas)], ancho: Math.max(40, ...lineas.map(l => letras(l).length + 1)), alto: lineas.length, codigo, res: res(izq, devuelve.join(" · ")) };
+  }
+  // lo mismo que modelos.py e imagenes.py, para las tarjetas de imagen() y ver_modelo()
+  const M3 = (() => {
+    const GRAD = [[40, 70, 200], [30, 170, 220], [60, 200, 120], [230, 210, 70], [230, 80, 60]];
+    const gradiente = t => {
+      t = Math.min(1, Math.max(0, t)) * (GRAD.length - 1);
+      const k = Math.min(GRAD.length - 2, Math.floor(t)), a = GRAD[k], b = GRAD[k + 1];
+      t -= k;
+      return [0, 1, 2].map(j => Math.trunc(a[j] + (b[j] - a[j]) * t));
+    };
+    function superficie(f, lo, hi, n = 44) {
+      const vals = [];
+      for (let j = 0; j <= n; j++) {
+        const fila = [], y = lo + (hi - lo) * j / n;
+        for (let i = 0; i <= n; i++) { const x = lo + (hi - lo) * i / n; const z = f(x, y); fila.push(Number.isFinite(z) ? z : null); }
+        vals.push(fila);
+      }
+      const todos = vals.flat().filter(z => z !== null);
+      const zmin = Math.min(...todos), zmax = Math.max(...todos), lado = hi - lo;
+      const escala = zmax - zmin <= lado ? 2 / lado : 2 / (zmax - zmin), zc = (zmin + zmax) / 2;
+      const V = [], idx = new Map(), T = [], C = [];
+      for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+        const z = vals[j][i];
+        if (z !== null) { idx.set(i + "," + j, V.length); V.push([lo + lado * i / n, lo + lado * j / n, zc + (z - zc) * escala * lado / 2]); }
+      }
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const e = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
+        if (!e.every(([a, b]) => idx.has(a + "," + b))) continue;
+        const [a, b, c, d] = e.map(([p, q]) => idx.get(p + "," + q));
+        const medio = e.reduce((t, [p, q]) => t + vals[q][p], 0) / 4;
+        const col = gradiente(zmax > zmin ? (medio - zmin) / (zmax - zmin) : 0.5);
+        T.push([a, b, c], [a, c, d]); C.push(col, col);
+      }
+      return normalizar(V, T, C);
+    }
+    function toro() {
+      const V = [], T = [], C = [], n = 48, m = 24;
+      for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+        const u = 2 * Math.PI * i / n, v = 2 * Math.PI * j / m;
+        V.push([(1 + 0.4 * Math.cos(v)) * Math.cos(u), (1 + 0.4 * Math.cos(v)) * Math.sin(u), 0.4 * Math.sin(v)]);
+      }
+      for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+        const a = i * m + j, b = ((i + 1) % n) * m + j, c = ((i + 1) % n) * m + (j + 1) % m, d = i * m + (j + 1) % m;
+        const col = i < n / 2 ? [230, 77, 51] : [51, 128, 230];
+        T.push([a, b, c], [a, c, d]); C.push(col, col);
+      }
+      return normalizar(V, T, C);
+    }
+    function normalizar(V, T, C) {
+      const lo = [0, 1, 2].map(k => Math.min(...V.map(v => v[k]))), hi = [0, 1, 2].map(k => Math.max(...V.map(v => v[k])));
+      const c = lo.map((a, k) => (a + hi[k]) / 2), s = Math.max(...lo.map((a, k) => (hi[k] - a) / 2), 1e-12);
+      V = V.map(v => v.map((x, k) => (x - c[k]) / s));
+      const radio = Math.max(...V.map(v => Math.hypot(...v))) || 1;
+      const N = T.map(([a, b, cc]) => {
+        const u = [0, 1, 2].map(k => V[b][k] - V[a][k]), w = [0, 1, 2].map(k => V[cc][k] - V[a][k]);
+        const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], l = Math.hypot(...n) || 1;
+        return n.map(x => x / l);
+      });
+      return { V, T, C, N, radio };
+    }
+    function pintar(m, W, H, giro, inc, zoom, fondo) {
+      const th = giro * Math.PI / 180, ph = inc * Math.PI / 180;
+      const r = [-Math.sin(th), Math.cos(th), 0], u = [-Math.sin(ph) * Math.cos(th), -Math.sin(ph) * Math.sin(th), Math.cos(ph)];
+      const d = [Math.cos(ph) * Math.cos(th), Math.cos(ph) * Math.sin(th), Math.sin(ph)];
+      const s = zoom * Math.min(W, H) / (2.08 * m.radio), cx = W / 2, cy = H / 2;
+      const P = m.V.map(([x, y, z]) => [cx + s * (x * r[0] + y * r[1] + z * r[2]), cy - s * (x * u[0] + y * u[1] + z * u[2]), x * d[0] + y * d[1] + z * d[2]]);
+      let L = [0, 1, 2].map(k => 0.6 * d[k] + 0.55 * u[k] - 0.35 * r[k]);
+      const ml = Math.hypot(...L); L = L.map(x => x / ml);
+      const orden = m.T.map((t, k) => [P[t[0]][2] + P[t[1]][2] + P[t[2]][2], k]).sort((a, b) => a[0] - b[0]);
+      const R = new Uint8ClampedArray(W * H).fill(fondo[0]), G = new Uint8ClampedArray(W * H).fill(fondo[1]),
+        B = new Uint8ClampedArray(W * H).fill(fondo[2]), A = new Uint8ClampedArray(W * H);
+      for (const [, k] of orden) {
+        const n = m.N[k], luz = Math.abs(n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
+        const t = Math.trunc((0.28 + 0.72 * luz) * 40) / 40, col = m.C[k];
+        const cr = Math.min(255, Math.trunc(col[0] * t)), cg = Math.min(255, Math.trunc(col[1] * t)), cb = Math.min(255, Math.trunc(col[2] * t));
+        const [[x0, y0], [x1, y1], [x2, y2]] = m.T[k].map(i => P[i]).sort((a, b) => a[1] - b[1]);
+        const ya = Math.max(0, Math.ceil(y0 - 0.5)), yb = Math.min(H - 1, Math.floor(y2 - 0.5));
+        if (yb < ya || y2 - y0 < 1e-9) continue;
+        const d02 = (x2 - x0) / (y2 - y0), d01 = y1 > y0 ? (x1 - x0) / (y1 - y0) : 0, d12 = y2 > y1 ? (x2 - x1) / (y2 - y1) : 0;
+        for (let y = ya; y <= yb; y++) {
+          const yc = y + 0.5;
+          let xa = x0 + d02 * (yc - y0), xb = yc < y1 ? x0 + d01 * (yc - y0) : x1 + d12 * (yc - y1);
+          if (xa > xb) [xa, xb] = [xb, xa];
+          const i0 = Math.max(0, Math.ceil(xa - 0.5)), i1 = Math.min(W, Math.floor(xb - 0.5) + 1), base = y * W;
+          if (i1 > i0) { R.fill(cr, base + i0, base + i1); G.fill(cg, base + i0, base + i1); B.fill(cb, base + i0, base + i1); A.fill(255, base + i0, base + i1); }
+        }
+      }
+      return { W, H, R, G, B, A };
+    }
+    // a otro tamaño haciendo la media de cada trozo
+    function escalar(p, W, H) {
+      const R = new Uint8ClampedArray(W * H), G = new Uint8ClampedArray(W * H), B = new Uint8ClampedArray(W * H), A = new Uint8ClampedArray(W * H);
+      const sx = p.W / W, sy = p.H / H, kx = Math.max(1, Math.min(4, Math.ceil(sx - 1e-9))), ky = Math.max(1, Math.min(4, Math.ceil(sy - 1e-9)));
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let i = 0; i < ky; i++) for (let j = 0; j < kx; j++) {
+          const q = Math.min(p.H - 1, Math.trunc((y + (i + 0.5) / ky) * sy)) * p.W + Math.min(p.W - 1, Math.trunc((x + (j + 0.5) / kx) * sx));
+          r += p.R[q]; g += p.G[q]; b += p.B[q]; a += p.A[q];
+        }
+        const n = kx * ky, o = y * W + x;
+        R[o] = Math.floor((r + (n >> 1)) / n); G[o] = Math.floor((g + (n >> 1)) / n); B[o] = Math.floor((b + (n >> 1)) / n); A[o] = Math.floor((a + (n >> 1)) / n);
+      }
+      return { W, H, R, G, B, A };
+    }
+    const hex = (r, g, b) => "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+    // medios bloques: la de arriba es la letra ▀ y la de abajo el fondo
+    function bloques(p, cols, filas) {
+      const out = [];
+      for (let f = 0; f < filas; f++) {
+        const fila = [];
+        for (let c = 0; c < cols; c++) {
+          const i = 2 * f * p.W + c, j = (2 * f + 1) * p.W + c;
+          const ar = p.A[i] >= 128, ab = 2 * f + 1 < p.H && p.A[j] >= 128;
+          const ca = hex(p.R[i], p.G[i], p.B[i]), cb = hex(p.R[j], p.G[j], p.B[j]);
+          if (ar && ab) fila.push(ca === cb ? ["█", ca, null] : ["▀", ca, cb]);
+          else if (ar) fila.push(["▀", ca, null]);
+          else if (ab) fila.push(["▄", cb, null]);
+          else fila.push([" ", null, null]);
+        }
+        out.push(fila);
+      }
+      return out;
+    }
+    const RAMPA = " .:-=+*#%@";
+    function letras(p, cols, filas) {
+      const luz = Array.from({ length: p.W * p.H }, (_, i) => 0.2126 * p.R[i] + 0.7152 * p.G[i] + 0.0722 * p.B[i]);
+      const orden = luz.filter((_, i) => p.A[i] >= 128).sort((a, b) => a - b);
+      const bajo = orden.length ? orden[Math.floor(orden.length / 50)] : 0, alto = orden.length ? orden[orden.length - 1 - Math.floor(orden.length / 50)] : 255;
+      const escala = 1 / Math.max(1, alto - bajo), out = [];
+      for (let f = 0; f < filas; f++) {
+        const fila = [];
+        for (let c = 0; c < cols; c++) {
+          const i = f * p.W + c;
+          if (p.A[i] < 128) { fila.push([" ", null, null]); continue; }
+          const l = Math.min(1, Math.max(0, (luz[i] - bajo) * escala)), ch = RAMPA[Math.min(RAMPA.length - 1, Math.trunc(l * RAMPA.length))];
+          const mx = Math.max(p.R[i], p.G[i], p.B[i], 1);
+          fila.push([ch, ch === " " ? null : hex(Math.min(255, Math.trunc(p.R[i] * 255 / mx)), Math.min(255, Math.trunc(p.G[i] * 255 / mx)), Math.min(255, Math.trunc(p.B[i] * 255 / mx))), null]);
+        }
+        out.push(fila);
+      }
+      return out;
+    }
+    // la foto de ejemplo: un atardecer con montañas y el sol
+    function atardecer(W, H) {
+      const R = new Uint8ClampedArray(W * H), G = new Uint8ClampedArray(W * H), B = new Uint8ClampedArray(W * H), A = new Uint8ClampedArray(W * H).fill(255);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const t = y / H, i = y * W + x;
+        let c = [255 - 120 * t, 120 + 60 * t - 100 * t * t, 90 + 120 * t];
+        const sol = Math.hypot(x - W * 0.62, y - H * 0.42) / (W * 0.11);
+        if (sol < 1) c = [255, 225 - 40 * sol, 120];
+        else if (sol < 1.6) c = c.map((v, k) => v + ([255, 200, 120][k] - v) * (1.6 - sol) / 0.6 * 0.5);
+        const m1 = H * (0.62 + 0.08 * Math.sin(x / W * 7) + 0.04 * Math.sin(x / W * 23)), m2 = H * (0.74 + 0.05 * Math.sin(x / W * 5 + 2));
+        if (y > m2) c = [20 + 30 * (y - m2) / H, 40 + 60 * (y - m2) / H, 35];
+        else if (y > m1) c = [70, 50, 90];
+        R[i] = c[0]; G[i] = c[1]; B[i] = c[2];
+      }
+      return { W, H, R, G, B, A };
+    }
+    return { superficie, toro, pintar, escalar, bloques, letras, atardecer };
+  })();
+  const SUPERFICIES = {
+    "silla: x² − y²": { f: (x, y) => x * x - y * y, py: "x**2 - y**2" },
+    "sin(x)·cos(y)": { f: (x, y) => Math.sin(x) * Math.cos(y), py: "math.sin(x) * math.cos(y)", math: true },
+    "paraboloide: x² + y²": { f: (x, y) => x * x + y * y, py: "x**2 + y**2" },
+    "ondas: sin(√(x² + y²))": { f: (x, y) => Math.sin(Math.hypot(x, y) * 2), py: "math.sin(2 * math.sqrt(x**2 + y**2))", math: true },
+    "semiesfera: √(9 − x² − y²)": { f: (x, y) => Math.sqrt(9 - x * x - y * y), py: "math.sqrt(9 - x**2 - y**2)", math: true },
+    "x·y": { f: (x, y) => x * y, py: "x * y" },
+    "un toro (como si fuera toro.obj)": { obj: true },
+  };
+  const _mallas = {};
+  const mallaDe = k => _mallas[k] || (_mallas[k] = SUPERFICIES[k].obj ? M3.toro() : M3.superficie(SUPERFICIES[k].f, -3, 3));
+  const fondoTerm = () => {
+    let h = getComputedStyle(document.documentElement).getPropertyValue("--term-bg").trim();
+    if (!/^#[0-9a-f]{6}$/i.test(h)) h = "#1c1917";
+    return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  };
+  const pintarPixeles = (ctx, p) => {
+    const datos = ctx.createImageData(p.W, p.H);
+    for (let i = 0, j = 0; i < p.W * p.H; i++, j += 4) { datos.data[j] = p.R[i]; datos.data[j + 1] = p.G[i]; datos.data[j + 2] = p.B[i]; datos.data[j + 3] = 255; }
+    ctx.putImageData(datos, 0, 0);
+  };
   const INTER = {
+    ver_espacio: {
+      nuevo: true, cat: "espacio", titulo: "pantalla.ver_espacio() y dibujar_espacio()",
+      desc: "Planos, rectas y puntos en 3D. Arrastra el dibujo con el ratón (o el dedo) para girarlo. Escribe planos (\"x + y = 2\", \"x/2 + y/3 + z = 1\"), rectas (\"(x - 1)/2 = y = z\" o \"x = t, y = 1, z = 2t\") o puntos (\"(1, 2, 3)\"). En la terminal sale igual si sabe pintar imágenes (Windows Terminal, iTerm2, kitty, WezTerm...); si no, o con estilo=\"puntos\", con puntitos braille.",
+      p: [{ k: "o1", t: "texto", v: "x + y + z = 3", label: "1" }, { k: "o2", t: "texto", v: "z = 1", label: "2" },
+        { k: "o3", t: "texto", v: "(x, y, z) = (0, 0, 0) + t·(1, 2, 0)", label: "3" }, { k: "o4", t: "texto", v: "(2, 1, 3)", label: "4" },
+        { k: "giro", t: "rango", v: 35, min: -180, max: 180 }, { k: "inclinacion", t: "rango", v: 25, min: -90, max: 90 },
+        { k: "estilo", t: "sel", v: "imagen", ops: ["imagen", "puntos"] }, { k: "caja", t: "check", v: true }, { k: "ejes", t: "check", v: true },
+        { k: "girar", t: "check", v: false }],
+      alto: 30, tactil: true, grande: true,
+      raton: (s, ev, c, p) => {
+        if (ev.type === "pointerdown") { s.ancla = [ev.clientX, ev.clientY]; try { ev.target.setPointerCapture(ev.pointerId); } catch (e) { /* da igual */ } return false; }
+        if (ev.type === "pointermove" && s.ancla && ev.buttons) {
+          const dx = ev.clientX - s.ancla[0], dy = ev.clientY - s.ancla[1];
+          if (Math.abs(dx) + Math.abs(dy) < 2) return false;
+          p.giro = ((Math.round(p.giro - dx * 0.5) + 540) % 360) - 180;
+          p.inclinacion = Math.max(-90, Math.min(90, Math.round(p.inclinacion + dy * 0.5)));
+          s.ancla = [ev.clientX, ev.clientY];
+          return "params";
+        }
+        if (ev.type !== "pointermove") s.ancla = null;
+        return false;
+      },
+      anim: (s, p) => { if (!p.girar || s.ancla) return -300; p.giro = ((p.giro - 2 + 540) % 360) - 180; return 60; },
+      vista: p => {
+        const textos = [p.o1, p.o2, p.o3, p.o4].map(t => String(t || "").trim()).filter(Boolean);
+        const pyDe = t => /^\([^=]*\)$/.test(t) ? t : py(t);
+        let cosas;
+        const codigoDe = nombres => "pantalla.ver_espacio({" + textos.map((t, i) => `${py(nombres[i])}: ${pyDe(t)}`).join(", ") + "}" +
+          (p.giro !== 35 ? `, giro=${p.giro}` : "") + (p.inclinacion !== 25 ? `, inclinacion=${p.inclinacion}` : "") +
+          (p.caja ? "" : ", caja=False") + (p.ejes ? "" : ", ejes=False") + (p.estilo === "puntos" ? ", estilo=\"puntos\"" : "") + (p.girar ? ", girar=True" : "") + ")" +
+          "\n\n# o un dibujo quieto, donde esté el cursor, como un print:\n# pantalla.dibujar_espacio(...)" +
+          "\n# o en su sitio, y que se gire con el ratón mientras esperas un menu():\n# pantalla.dibujar_espacio(..., x=40, y=2, girar=True)";
+        try { cosas = E3.objetos(textos.map(t => [null, t])); }
+        catch (e) {
+          const err = errorPy("ValueError", e.message);
+          return { elementos: errorEnTerminal(err, 50), ancho: 50, alto: 6, codigo: codigoDe(textos.map((_, i) => "π" + (i + 1))), res: res("lanza", "ValueError") };
+        }
+        const cols = 60, filas = 22, [lo, hi] = E3.tamanoCaja(cosas);
+        const [g, rel] = E3.geometria(cosas, lo, hi, p.caja, p.ejes, true);
+        const ley = E3.leyenda(cosas, rel, cols);
+        const hexDe = c => "#" + E3.RGB[c].map(v => v.toString(16).padStart(2, "0")).join("");
+        const els = ley.map(([t, color], k) => ({ tipo: "texto", x: 1, y: filas + 1 + k, texto: t, color: p.estilo === "puntos" ? color : hexDe(color) }));
+        const codigo = codigoDe(cosas.map(c => c.nombre)), resultado = res("dibujar_espacio() devuelve", `(${cols}, ${filas + ley.length})`);
+        if (p.estilo === "puntos") {
+          const cam = E3.camara(cols * 2, filas * 4, p.giro, p.inclinacion, 1, lo, hi);
+          return { elementos: [{ tipo: "celdas", x: 1, y: 1, filas: E3.conBraille(g, cols, filas, cam) }].concat(els), ancho: cols, alto: filas + ley.length, codigo, res: resultado };
+        }
+        const pintar = (ctx, M) => {
+          const W = cols * M.cwD, H = filas * M.chD, cam = E3.camara(W, H, p.giro, p.inclinacion, 1, lo, hi);
+          let h = getComputedStyle(document.documentElement).getPropertyValue("--term-bg").trim();
+          if (!/^#[0-9a-f]{6}$/i.test(h)) h = "#1c1917";
+          const fondo = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+          const img = E3.conImagen(g, W, H, cam, M.cwD / 10, fondo), datos = ctx.createImageData(W, H);
+          for (let i = 0, j = 0; i < W * H; i++, j += 4) { datos.data[j] = img.R[i]; datos.data[j + 1] = img.G[i]; datos.data[j + 2] = img.B[i]; datos.data[j + 3] = 255; }
+          ctx.putImageData(datos, 0, 0);
+          ctx.font = `400 ${M.fs * M.d}px "JetBrains Mono", "Cascadia Mono", Consolas, "DejaVu Sans Mono", "Segoe UI Symbol", monospace`;
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          E3.letrasImagen(g, img, cols, filas, M.cwD, M.chD, cam).forEach(([c, f, ch, color]) => {
+            ctx.fillStyle = h; ctx.fillRect(c * M.cwD, f * M.chD, M.cwD, M.chD);
+            ctx.fillStyle = "rgb(" + E3.RGB[color].join(",") + ")"; ctx.fillText(ch, c * M.cwD + M.cwD / 2, f * M.chD + M.chD / 2);
+          });
+        };
+        return { elementos: els, ancho: cols, alto: filas + ley.length, codigo, res: resultado, pintar };
+      },
+    },
+    plano3d: {
+      nuevo: true, cat: "espacio", titulo: "pantalla.plano() y ecuaciones_plano()",
+      desc: "Un plano por tres puntos (o escrito, o por un punto y su vector normal) con todas sus ecuaciones. print(pi) da la general.",
+      alto: 5,
+      vista: () => estatica3d("plano3d", "pi = pantalla.ecuaciones_plano((1, 0, 2), (0, 3, 0), (1, 1, 1))\n\npi = pantalla.plano(\"x/3 + y/3 + z/3 = 1\")   # también escrito\npi = pantalla.plano((1, 2, 3), normal=(1, 1, 1))\nprint(pi.segmentaria())", "devuelve"),
+    },
+    recta3d: {
+      nuevo: true, cat: "espacio", titulo: "pantalla.recta() en el espacio",
+      desc: "Con puntos de tres números, recta() da una recta del espacio: vectorial, paramétricas, continua e implícitas (dos planos que se cortan en ella).",
+      alto: 4,
+      vista: () => estatica3d("recta3d", "r = pantalla.ecuaciones_recta((1, 2, 3), (2, 2, 5))\n\nr = pantalla.recta(\"(x - 1)/2 = y = z + 1\")      # también escrita\nr = pantalla.recta(\"x + y = 3\", \"z = 1\")          # donde se cortan dos planos\nr = pantalla.recta((1, 1, 1), perpendicular=pi)", "devuelve"),
+    },
+    posicion3d: {
+      nuevo: true, cat: "espacio", titulo: "pantalla.posicion() en el espacio",
+      desc: "La posición relativa de dos rectas, recta y plano, dos planos o tres planos. Con pasos=True enseña los rangos (Rouché).",
+      alto: 11,
+      vista: () => estatica3d(["posicion3d", "posicion_rectas3d"], "pantalla.posicion(\"x + y + z = 3\", \"x - y = 1\", \"z = 2\", pasos=True)\nr = pantalla.recta((1, 0, 0), vector=(1, 1, 0))\ns = pantalla.recta((0, 0, 1), vector=(0, 1, 1))\npantalla.posicion(r, s, pasos=True)\n\nprint(pantalla.interseccion(\"x + y + z = 3\", \"x - y = 1\", \"z = 2\"))", "devuelve"),
+    },
+    distancia3d: {
+      nuevo: true, cat: "espacio", titulo: "pantalla.distancia() y angulo()",
+      desc: "Distancias entre puntos, rectas y planos (también entre rectas que se cruzan, con el producto mixto) y ángulos entre rectas y planos. Las raíces salen exactas.",
+      alto: 9,
+      vista: () => estatica3d(["distancia3d", "angulo3d"], "pantalla.distancia((1, 2, 3), \"2x - y + 2z = 1\", pasos=True)\nr = pantalla.recta((0, 0, 0), vector=(1, 0, 0))\ns = pantalla.recta((0, 1, 1), vector=(0, 1, 0))\npantalla.distancia(r, s, pasos=True)\n\npantalla.angulo(pantalla.recta((0, 0, 0), vector=(1, 1, 0)), \"z = 0\", pasos=True)\npantalla.angulo(\"x + y = 1\", \"x - z = 2\", pasos=True)", "devuelve"),
+    },
+    proyeccion3d: {
+      nuevo: true, cat: "espacio", titulo: "proyeccion(), simetrico() y perpendicular_comun()",
+      desc: "La proyección de un punto (o una recta) en un plano o en una recta, el simétrico respecto de un punto, una recta o un plano, y la perpendicular común de dos rectas que se cruzan.",
+      alto: 6,
+      vista: () => estatica3d("proyeccion3d", "pantalla.proyeccion((1, 2, 3), \"x + y + z = 0\", pasos=True)\npantalla.simetrico((1, 2, 3), \"x + y + z = 0\", pasos=True)\n\nprint(pantalla.perpendicular_comun(r, s))", "devuelve"),
+    },
+    area3d: {
+      nuevo: true, cat: "espacio", titulo: "area_triangulo() y volumen_tetraedro()",
+      desc: "El área de un triángulo con el producto vectorial y el volumen de un tetraedro con el producto mixto. También estan_alineados() y son_coplanarios().",
+      alto: 7,
+      vista: () => estatica3d("area3d", "pantalla.area_triangulo((1, 0, 0), (0, 2, 0), (0, 0, 3), pasos=True)\npantalla.volumen_tetraedro((0, 0, 0), (1, 0, 0), (0, 2, 0), (0, 0, 3), pasos=True)\n\nprint(pantalla.son_coplanarios((0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)))   # True", "devuelve"),
+    },
+    ver_modelo: {
+      nuevo: true, cat: "modelos", titulo: "pantalla.ver_modelo() y dibujar_modelo()",
+      desc: "Figuras 3D de verdad: un modelo .obj o .stl, una foto en relieve o una superficie z = f(x, y). Arrastra para girarla. En la terminal sale con píxeles si sabe pintar imágenes (Windows Terminal, WezTerm, kitty, iTerm2...) y si no con medios bloques ▀ de colores (cmd, la Terminal del Mac).",
+      p: [{ k: "superficie", t: "sel", v: "silla: x² − y²", ops: Object.keys(SUPERFICIES), label: "qué" },
+        { k: "giro", t: "rango", v: -55, min: -180, max: 180 }, { k: "inclinacion", t: "rango", v: 22, min: -90, max: 90 },
+        { k: "estilo", t: "sel", v: "imagen", ops: ["imagen", "bloques"] }, { k: "girar", t: "check", v: false }],
+      alto: 22, tactil: true, grande: true,
+      raton: (s, ev, c, p) => {
+        if (ev.type === "pointerdown") { s.ancla = [ev.clientX, ev.clientY]; try { ev.target.setPointerCapture(ev.pointerId); } catch (e) { /* da igual */ } return false; }
+        if (ev.type === "pointermove" && s.ancla && ev.buttons) {
+          const dx = ev.clientX - s.ancla[0], dy = ev.clientY - s.ancla[1];
+          if (Math.abs(dx) + Math.abs(dy) < 2) return false;
+          p.giro = ((Math.round(p.giro - dx * 0.5) + 540) % 360) - 180;
+          p.inclinacion = Math.max(-90, Math.min(90, Math.round(p.inclinacion + dy * 0.5)));
+          s.ancla = [ev.clientX, ev.clientY];
+          return "params";
+        }
+        if (ev.type !== "pointermove") s.ancla = null;
+        return false;
+      },
+      anim: (s, p) => { if (!p.girar || s.ancla) return -300; p.giro = ((p.giro - 3 + 540) % 360) - 180; return 60; },
+      vista: p => {
+        const S = SUPERFICIES[p.superficie] || SUPERFICIES["silla: x² − y²"], m = mallaDe(SUPERFICIES[p.superficie] ? p.superficie : "silla: x² − y²");
+        const cosa = S.obj ? py("toro.obj") : "lambda x, y: " + S.py;
+        const opc = (p.giro !== -55 ? `, giro=${p.giro}` : "") + (p.inclinacion !== 22 ? `, inclinacion=${p.inclinacion}` : "") +
+          (p.estilo === "bloques" ? ", estilo=\"bloques\"" : "");
+        const codigo = (S.math ? "import math\n\n" : "") + `pantalla.ver_modelo(${cosa}${opc}${p.girar ? ", girar=True" : ""})` +
+          "\n\n# también vale un modelo o una foto (en relieve):\n# pantalla.ver_modelo(\"tetera.obj\")\n# pantalla.ver_modelo(\"foto.jpg\", relieve=0.4)" +
+          `\n\n# o quieta en su sitio, y se gira con el ratón mientras esperas un menu():\n# pantalla.dibujar_modelo(${cosa}, 40, 2, girar=True)`;
+        const cols = 60, filas = 22;
+        const resultado = res("triángulos", String(m.T.length));
+        if (p.estilo === "bloques") {
+          const img = M3.escalar(M3.pintar(m, cols * 2, filas * 4, p.giro, p.inclinacion, 1, fondoTerm()), cols, filas * 2);
+          return { elementos: [{ tipo: "celdas", x: 1, y: 1, filas: M3.bloques(img, cols, filas) }], ancho: cols, alto: filas, codigo, res: resultado };
+        }
+        const pintar = (ctx, M) => pintarPixeles(ctx, M3.pintar(m, cols * M.cwD, filas * M.chD, p.giro, p.inclinacion, 1, fondoTerm()));
+        return { elementos: [], ancho: cols, alto: filas, codigo, res: resultado, pintar };
+      },
+    },
+    imagen: {
+      nuevo: true, cat: "modelos", titulo: "pantalla.imagen()",
+      desc: "Enseña una foto o un dibujo (PNG, JPG, GIF, BMP o PPM) en la terminal, sin instalar nada. Con estilo=\"auto\" sale tal cual si la terminal sabe pintar imágenes, y si no con medios bloques ▀ de colores; \"letras\" la hace con . : - = + * # % @ de colores.",
+      p: [{ k: "estilo", t: "sel", v: "imagen", ops: ["imagen", "bloques", "letras"] }, { k: "ancho", t: "rango", v: 48, min: 8, max: 60 }],
+      alto: 18,
+      vista: p => {
+        const cols = p.ancho, filas = Math.max(1, Math.round(cols * (2 / 3) * 0.5));
+        const codigo = llamada("imagen", ["atardecer.png"], [["ancho", p.ancho], ["estilo", p.estilo === "imagen" ? null : p.estilo]]) +
+          "\n\n# donde quieras, y sin pasarse de 40 columnas ni de 10 filas:\n# pantalla.imagen(\"gato.jpg\", 5, 2, ancho=40, alto=10)";
+        const resultado = res("imagen() devuelve", `(${cols}, ${filas})`);
+        if (p.estilo === "imagen") {
+          const pintar = (ctx, M) => pintarPixeles(ctx, M3.escalar(M3.atardecer(600, 400), cols * M.cwD, filas * M.chD));
+          return { elementos: [], ancho: cols, alto: filas, codigo, res: resultado, pintar };
+        }
+        const img = M3.escalar(M3.atardecer(600, 400), cols, p.estilo === "bloques" ? filas * 2 : filas);
+        const celdas = p.estilo === "bloques" ? M3.bloques(img, cols, filas) : M3.letras(img, cols, filas);
+        return { elementos: [{ tipo: "celdas", x: 1, y: 1, filas: celdas }], ancho: cols, alto: filas, codigo, res: resultado };
+      },
+    },
     grafica: {
       desc: "La gráfica de una función, con sus ejes. La línea va con puntitos braille para que salga fina (estilo=\"puntos\" la hace con •). Se ajusta sola, y donde la función no existe (como 1/x en el 0) deja un hueco.",
       p: [{ k: "funcion", t: "sel", v: "a·x² + b", ops: Object.keys(FUNCIONES), label: "función" },
@@ -6268,6 +7393,8 @@ const Docs = (() => {
     { id: "texto", label: "Texto" }, { id: "dibujo", label: "Dibujar" }, { id: "letras", label: "Letras grandes" },
     { id: "arte", label: "Arte ASCII" }, { id: "raton", label: "Ratón y botones" }, { id: "componentes", label: "Cosas ya hechas" },
     { id: "mates", label: "Matemáticas" }, { id: "vectores", label: "Vectores" }, { id: "rectas", label: "Rectas" },
+    { id: "espacio", label: "Espacio (3D)" },
+    { id: "modelos", label: "Imágenes y modelos 3D" },
     { id: "polinomios", label: "Polinomios" }, { id: "estadistica", label: "Estadística" }, { id: "graficas", label: "Gráficas" },
     { id: "practicar", label: "Practicar y récords" },
     { id: "spinners", label: "Spinners" }, { id: "juegos", label: "Juegos" }, { id: "control", label: "Teclado y control" },
@@ -6291,7 +7418,7 @@ const Docs = (() => {
     const x = INTER[ej.nombre], st = estadoDe(ej);
     if (x && x.vista) {
       const v = x.vista(st.p, st.s);
-      return { elementos: v.elementos, codigo: v.codigo, res: v.res || "", ancho: v.ancho || ej.ancho, alto: v.alto || x.alto || ej.alto };
+      return { elementos: v.elementos, codigo: v.codigo, res: v.res || "", ancho: v.ancho || ej.ancho, alto: v.alto || x.alto || ej.alto, pintar: v.pintar };
     }
     const els = ej.relleno ? ej.elementos.map(e => ({ ...e, texto: ej.relleno() })) : ej.elementos;
     return { elementos: els, codigo: ej.codigo, res: "", ancho: ej.ancho, alto: ej.alto };
@@ -6314,7 +7441,8 @@ const Docs = (() => {
       while (fs > minimo && (v.ancho * M.cw > W || v.alto * M.ch > H)) { fs -= 0.5; M = TERM.medidas(fs); }
       caja.classList.toggle("desborda", v.ancho * M.cw > W + 0.5);
     }
-    TERM.dibujar(cv, pintarElementos(v.ancho, v.alto, v.elementos, true), { fs });
+    const M = TERM.dibujar(cv, pintarElementos(v.ancho, v.alto, v.elementos, true), { fs });
+    if (v.pintar) v.pintar(cv.getContext("2d"), M);
     cv._cols = v.ancho; cv._filas = v.alto;
     if (card._cod !== v.codigo) { card._cod = v.codigo; card.querySelector(".doc-code pre").innerHTML = resaltarPy(v.codigo); }
     const r = card.querySelector(".doc-res");
@@ -6428,7 +7556,7 @@ const Docs = (() => {
     const ctl = `<div class="doc-ctl${(x.p || []).length || acc || tec ? "" : " vacio"}">${(x.p || []).map(d => controlHTML(d, st.p[d.k])).join("")}` +
       (acc ? `<div class="doc-acciones">${acc}</div>` : "") + (tec ? `<div class="doc-teclas" aria-label="Teclas">${tec}</div>` : "") + `</div>`;
     const aviso = x.tecla && x.raton ? "ratón y teclado" : x.tecla ? "teclado" : x.raton ? "ratón" : "";
-    return `<article class="doc-card" data-n="${ej.nombre}" id="doc-${ej.nombre}"><div class="doc-card-head"><h3>${escapar(ej.titulo)}</h3><p>${escapar(ej.desc)}</p></div>` + ctl +
+    return `<article class="doc-card${x.grande ? " grande" : ""}" data-n="${ej.nombre}" id="doc-${ej.nombre}"><div class="doc-card-head"><h3>${escapar(ej.titulo)}</h3><p>${escapar(ej.desc)}</p></div>` + ctl +
       `<div class="doc-preview"><canvas class="term" ${tocable ? 'tabindex="0" role="application"' : 'role="img"'} aria-label="Ejemplo de ${escapar(ej.titulo)}${tocable ? " (se puede tocar con " + aviso + ")" : ""}"></canvas>` +
       (tocable ? `<span class="toca">${ico(x.icoToca || (x.tecla && !x.raton ? "keyboard" : "mouse"))} ${x.icoToca ? "juega" : "pruébalo"}</span>` : "") + `</div>` +
       `<p class="doc-res" aria-live="${x.anim ? "off" : "polite"}"></p>` +

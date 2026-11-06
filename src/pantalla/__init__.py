@@ -40,15 +40,21 @@ from .numeros import (Fraccion, calcular, descomponer, divisores, es_primo, escr
 from .polinomios import (Polinomio, dividir_polinomios, ecuacion_segundo_grado, factorizar_polinomio,
                          polinomio, raices, ruffini)
 from .ejercicios import lista_temas, practicar
+from .espacio import (Plano, Punto, Recta3D, angulo, area_triangulo, distancia, ecuaciones_plano, estan_alineados,
+                      interseccion, perpendicular_comun, plano, plano_mediador, posicion, proyeccion,
+                      punto_medio, simetrico, son_coplanarios, volumen_tetraedro)
 from .records import (Cronometro, cronometro, cuenta_atras, guardar_record, leer_records, mejor_record,
                       tabla_records)
 from .rectas import (Recta, angulo_rectas, distancia_punto_recta, ecuaciones_recta, interseccion_rectas,
                      posicion_rectas, recta)
 from .spinners import Spinner, lista_spinners, spinner
-from .vectores import (Vector, angulo, dibujar_vectores, distancia, modulo, multiplicar_vector, pedir_vector,
-                       producto_escalar, producto_mixto, producto_vectorial, proyeccion, restar_vectores,
+from .vectores import (Vector, dibujar_vectores, modulo, multiplicar_vector, pedir_vector,
+                       producto_escalar, producto_mixto, producto_vectorial, restar_vectores,
                        son_independientes, son_paralelos, son_perpendiculares, sumar_vectores, unitario,
                        vector, vector_entre)
+from .imagenes import imagen
+from .modelos import Modelo, dibujar_modelo, modelo, ver_modelo
+from .visor import dibujar_espacio, ver_espacio
 from .teclado import (confirmar, esperar, pedir, pedir_contrasena, pedir_numero, tecla,
                       tecla_pulsada, vaciar_teclado)
 from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, ir_a, limpiar,
@@ -56,7 +62,7 @@ from .terminal import (alto, ancho, centro, gotoxy, guardar_posicion, iniciar, i
                        terminar, titulo_ventana, volver_a_posicion)
 from .texto import centrar, escribir, escribir_derecha, escribir_lento
 
-__version__ = "0.6.0"
+__version__ = "1.0.0"
 
 from .terminal import _abrir_en_consola_si_idle as _abrir
 
@@ -90,6 +96,10 @@ _GRUPOS = [
                   "son_independientes", "dibujar_vectores"]),
     ("Rectas", ["recta", "Recta", "ecuaciones_recta", "posicion_rectas", "interseccion_rectas",
                 "distancia_punto_recta", "angulo_rectas"]),
+    ("Espacio (3D)", ["ver_espacio", "dibujar_espacio", "plano", "Plano", "Recta3D", "Punto", "ecuaciones_plano",
+                      "posicion", "interseccion", "distancia", "angulo", "proyeccion", "simetrico",
+                      "perpendicular_comun", "punto_medio", "plano_mediador", "area_triangulo",
+                      "volumen_tetraedro", "estan_alineados", "son_coplanarios"]),
     ("Polinomios", ["polinomio", "Polinomio", "ruffini", "dividir_polinomios", "raices", "factorizar_polinomio",
                     "ecuacion_segundo_grado"]),
     ("Fracciones y números", ["fraccion", "pedir_fraccion", "calcular", "escribir_cuenta", "mcd", "mcm",
@@ -97,6 +107,7 @@ _GRUPOS = [
                               "a_binario", "a_hexadecimal", "a_decimal"]),
     ("Estadística", ["media", "mediana", "moda", "varianza", "desviacion", "cuartiles", "tabla_frecuencias",
                      "histograma", "estadisticas"]),
+    ("Imágenes y modelos 3D", ["imagen", "ver_modelo", "dibujar_modelo", "modelo", "Modelo"]),
     ("Gráficas", ["grafica", "barras", "minigrafica"]),
     ("Practicar", ["practicar", "lista_temas"]),
     ("Ratón", ["activar_raton", "desactivar_raton", "esperar_clic", "leer_raton",
@@ -104,15 +115,16 @@ _GRUPOS = [
     ("Diseñar y ver posiciones", ["diseno", "regla", "depurar"]),
 ]
 
-__all__ = [nombre for _, nombres in _GRUPOS for nombre in nombres] + ["ayuda", "Spinner", "PantallaDeCarga", "Fraccion", "ESTILOS",
-                                                                     "CODIGOS_COLOR"]
+__all__ = list(dict.fromkeys([nombre for _, nombres in _GRUPOS for nombre in nombres] +
+                             ["ayuda", "Spinner", "PantallaDeCarga", "Fraccion", "ESTILOS", "CODIGOS_COLOR"]))
 
 
 _PARECIDAS = {
     "borrar": "limpiar", "cls": "limpiar", "clear": "limpiar", "borrar_pantalla": "limpiar",
     "print": "escribir", "imprimir": "escribir", "mostrar": "escribir", "poner": "escribir",
     "texto": "escribir", "input": "pedir", "leer": "pedir", "preguntar": "pedir",
-    "sleep": "pausa", "dormir": "pausa", "esperar_segundos": "pausa", "wait": "pausa",
+    "foto": "imagen", "mostrar_imagen": "imagen", "ver_imagen": "imagen", "dibujo_3d": "ver_modelo",
+    "ver_3d": "ver_modelo", "cargar_modelo": "modelo", "sleep": "pausa", "dormir": "pausa", "esperar_segundos": "pausa", "wait": "pausa",
     "color": "poner_color", "colores": "lista_colores", "fuentes": "lista_fuentes",
     "posicion": "gotoxy", "mover": "gotoxy", "cursor": "gotoxy", "goto": "gotoxy",
     "rectangulo": "caja", "cuadro": "caja", "recuadro": "caja", "marco": "rodear", "borde": "rodear",
@@ -155,6 +167,16 @@ _PARECIDAS = {
     "record": "guardar_record", "records": "leer_records", "puntuacion": "guardar_record",
     "puntuaciones": "leer_records", "highscore": "guardar_record", "temporizador": "cronometro",
     "reloj": "cronometro", "timer": "cronometro", "tiempo": "cronometro", "countdown": "cuenta_atras",
+    "planos": "plano", "espacio": "ver_espacio", "3d": "ver_espacio", "dibujar_3d": "dibujar_espacio",
+    "ver_3d": "ver_espacio", "visor": "ver_espacio", "dibujar_plano": "dibujar_espacio", "ver_plano": "ver_espacio",
+    "posicion_relativa": "posicion", "posicion_planos": "posicion", "corte_planos": "interseccion",
+    "interseccion_planos": "interseccion", "distancia_punto_plano": "distancia", "distancia_rectas": "distancia",
+    "angulo_planos": "angulo", "simetria": "simetrico", "reflejar": "simetrico", "simetrico_punto": "simetrico",
+    "proyectar": "proyeccion", "proyeccion_ortogonal": "proyeccion", "punto_medio_segmento": "punto_medio",
+    "mediador": "plano_mediador", "area": "area_triangulo", "volumen": "volumen_tetraedro",
+    "tetraedro": "volumen_tetraedro", "triangulo": "area_triangulo", "alineados": "estan_alineados",
+    "coplanarios": "son_coplanarios", "ecuacion_plano": "ecuaciones_plano", "recta3d": "Recta3D",
+    "perpendicular": "perpendicular_comun",
 }
 
 

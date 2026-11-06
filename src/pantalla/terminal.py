@@ -26,6 +26,9 @@ _estado = {
     "estilo": "",
 }
 
+# dibujos que se giran con el ratón (dibujar_espacio con girar=True)
+_giratorios = []
+
 
 # sin esto el cmd de windows enseña los codigos tal cual, tipo [31m
 def _activar_ansi_en_windows():
@@ -173,6 +176,14 @@ def _mover(x, y):
     return "%s%d;%dH" % (CSI, y, x)
 
 
+def _ayuda_que_cabe(texto, ancho):
+    # si no cabe se van quitando cosas, pero "Esc salir" (la última) se queda
+    trozos = texto.split(" · ")
+    while len(trozos) > 2 and len(" · ".join(trozos)) > ancho:
+        del trozos[-2]
+    return " · ".join(trozos)[:max(0, ancho)]
+
+
 def _fin_de_estilo():
     return RESET + _estado["estilo"]
 
@@ -200,6 +211,7 @@ def limpiar():
     Si antes has puesto un color de fondo con poner_color(fondo="azul"),
     la pantalla entera se queda de ese color.
     """
+    del _giratorios[:]
     _salida(CSI + "2J" + _mover(1, 1))
 
 
@@ -276,7 +288,15 @@ def pausa(segundos):
     if _juego["mostrar"] is not None:
         _juego["mostrar"]()
     sys.stdout.flush()
-    time.sleep(segundos)
+    # en linux y mac si no, las teclas que pulses mientras salen escritas (^[[A...)
+    from .teclado import _activar_modo_teclas, _desactivar_modo_teclas, _modo
+    ya_estaba = _modo["original"] is not None
+    _activar_modo_teclas()
+    try:
+        time.sleep(segundos)
+    finally:
+        if not ya_estaba:
+            _desactivar_modo_teclas()
 
 
 def iniciar(borrar=True, cursor=False, aparte=True, titulo=None):

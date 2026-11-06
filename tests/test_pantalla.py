@@ -420,6 +420,16 @@ class TestComponentes(Base):
         self.assertIn("que tal", p.texto())
         self.assertIn("Pulsa una tecla", p.texto())
 
+    def test_mensaje_largo_cabe_en_la_pantalla(self):
+        largo = "polinomio: no entiendo el trozo 'abc' de 'abc'. Escríbelo así: 2x^3 - 3x + 1"
+        with mock.patch.object(componentes, "tecla", lambda: "x"):
+            p = self.pinta(pantalla.mensaje, largo, titulo="Ups")
+        bordes = [l for l in p.texto().split("\n") if "═" in l]
+        self.assertTrue(bordes)
+        for l in bordes:
+            self.assertTrue(l.rstrip().endswith("╗") or l.rstrip().endswith("╝"), l)
+        self.assertIn("Escríbelo así", p.texto())
+
     def test_tabla(self):
         p = self.pinta(pantalla.tabla, [["Ana", 8.5], ["Luis", 10]], ["Nombre", "Nota"], x=1, y=1)
         self.assertEqual(p.linea(1)[:17], "┌────────┬──────┐")
