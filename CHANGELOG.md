@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.1.0
+
+- Guía para IA: un documento enorme con todo lo que hay que saber de pantalla (cómo funciona, la firma y la explicación de cada función, los valores válidos, los errores típicos, el manual y los ejemplos) para pasárselo a ChatGPT, Claude, Gemini, Copilot... y que la use sin inventarse nada.
+- En la web hay un apartado nuevo, **Guía para IA**, para descargarla en `.md` o `.json` o copiarla de una vez. También sale en el menú de inicio.
+- `python -m pantalla ia` escribe la guía de la versión que tienes instalada.
+- `scripts/guia_ia.py` la vuelve a generar a partir del código, para que siempre esté al día.
+
 ## 1.0.0
 
 - Geometría del espacio (2.º de bachillerato): `plano()` y `Plano` (por tres puntos, punto y normal, punto y dos vectores, o escrito), con la ecuación general, vectorial, paramétricas y segmentaria. `recta()` con puntos de tres números da una `Recta3D`, también escrita en continua, paramétricas o como corte de dos planos.

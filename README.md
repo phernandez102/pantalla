@@ -883,6 +883,17 @@ También vale guardar el diseño en un archivo `mi_pantalla.json` y hacer `panta
 
 En la misma web está la **documentación**: cada función con un ejemplo que se dibuja como en la terminal. Arriba tienes un buscador (pulsa `/` o Ctrl+K) que también entiende palabras en inglés como `loading` o `input`. En las gráficas, `barras()`, `mcd()` o `descomponer()` mueves los deslizadores y el dibujo cambia al momento. Salen las mismas cuentas que en Python, así que lo que ves es lo que te va a salir.
 
+## Guía para IA
+
+¿Usas ChatGPT, Claude, Gemini o Copilot para programar? Dale la guía de pantalla y sabrá usarla sin inventarse funciones: trae cómo funciona la librería, la firma exacta y la explicación de cada función, los colores, fuentes y estilos que valen, los errores típicos, este manual y todos los ejemplos.
+
+- Descárgala de la web, en **[Guía para IA](https://phernandez102.github.io/pantalla/#ia)** (en `.md` para pegarla en el chat o en `.json` para agentes y programas).
+- O sácala de la librería que tienes instalada, de tu misma versión:
+
+```
+python -m pantalla ia > pantalla-ia.md
+```
+
 ## Ejemplos
 
 En la carpeta `ejemplos` del repositorio hay programas cortos, del más fácil al más difícil:

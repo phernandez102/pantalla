@@ -558,6 +558,19 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 .doc-seccion h3 { font-family: var(--f-mono); font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; }
 .doc-seccion h3 span { color: var(--accent); }
 .doc-seccion > p { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px; max-width: 75ch; }
+.ia-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.ia-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 16px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px; }
+.ia-card h4, .ia-pasos h4 { margin: 0; font-size: 0.95rem; }
+.ia-card p, .ia-pasos p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+.ia-cab { display: flex; justify-content: space-between; align-items: center; }
+.ia-ext { font-family: var(--f-mono); font-weight: 700; font-size: 0.8rem; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 99px; }
+.ia-peso { font-family: var(--f-mono); font-size: 0.76rem; color: var(--muted); }
+.ia-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
+.ia-botones .boton, .ia-pasos .boton { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit; }
+.ia-botones .boton.principal { color: var(--accent-ink); }
+.ia-pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+.ia-pasos > div { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 0; }
+.ia-prompt { margin: 0; width: 100%; box-sizing: border-box; font-family: var(--f-mono); font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; }
 .doc-colores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .doc-color-chip {
   display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px;
@@ -775,7 +788,8 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
     <button data-op="0">1 · Constructor visual</button>
     <button data-op="1">2 · Documentación</button>
     <button data-op="2">3 · Galería de fuentes ASCII</button>
-    <button data-op="3">4 · Ver el código de esta pantalla</button>
+    <button data-op="3">4 · Guía para IA (descargar)</button>
+    <button data-op="4">5 · Ver el código de esta pantalla</button>
   </nav>
   <div class="ini-codigo" id="ini-codigo" hidden>
     <div class="ini-codigo-cab"><span>inicio.py</span><button class="boton" id="ini-copiar">Copiar</button></div>
@@ -789,7 +803,7 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
 <header class="cabeza">
   <div class="marca">
     <h1>pantalla<span>.</span>constructor</h1>
-    <small>para la librería <code>pantalla</code> 0.6</small>
+    <small>para la librería <code>pantalla</code> 1.1</small>
   </div>
   <ol class="pasos" aria-label="Cómo se usa">
     <li><b>1</b> Dibuja en la terminal</li>
@@ -987,6 +1001,43 @@ button.arbol-cat:hover, .arbol-grupo.activo > .arbol-cat { color: var(--accent);
   <div class="docs-main">
 
   <div id="docs-grid"></div>
+
+  <div class="doc-seccion" id="sec-ia">
+    <h3>Guía para <span>IA</span></h3>
+    <p>Todo sobre <code>pantalla</code> en un solo archivo para dárselo a cualquier IA (ChatGPT, Claude, Gemini, Copilot, Cursor...): cómo pensar con la librería, las firmas exactas de sus 188 funciones y clases con su explicación, los valores válidos, los errores típicos, el manual entero y los 24 ejemplos. Adjúntalo o pégalo al principio del chat y pídele lo que quieras.</p>
+    <div class="ia-grid">
+      <article class="ia-card">
+        <div class="ia-cab"><span class="ia-ext">.md</span><span class="ia-peso" data-peso="pantalla-ia.md">~195 KB</span></div>
+        <h4>Markdown</h4>
+        <p>Para pegar o adjuntar en un chat. Se lee bien y la IA lo entiende a la primera.</p>
+        <div class="ia-botones">
+          <a class="boton principal" href="pantalla-ia.md" download="pantalla-ia.md" data-ico="download">Descargar .md</a>
+          <button type="button" class="boton" id="ia-copiar" data-ico="copy">Copiar el texto</button>
+        </div>
+      </article>
+      <article class="ia-card">
+        <div class="ia-cab"><span class="ia-ext">.json</span><span class="ia-peso" data-peso="pantalla-ia.json">~220 KB</span></div>
+        <h4>JSON</h4>
+        <p>Lo mismo ordenado por campos (<code>api</code>, <code>valores</code>, <code>ejemplos</code>...) para agentes, RAG o tus propios programas.</p>
+        <div class="ia-botones">
+          <a class="boton principal" href="pantalla-ia.json" download="pantalla-ia.json" data-ico="download">Descargar .json</a>
+          <a class="boton" href="pantalla-ia.json" target="_blank" rel="noopener" data-ico="file-code">Ver</a>
+        </div>
+      </article>
+    </div>
+    <div class="ia-pasos">
+      <div>
+        <h4>Qué escribirle a la IA</h4>
+        <pre class="ia-prompt" id="ia-prompt">Te adjunto la guía de la librería de Python "pantalla". Léela entera y úsala como única referencia: usa solo funciones y parámetros que salgan ahí. Ayúdame a hacer un programa que...</pre>
+        <button type="button" class="boton" id="ia-copiar-prompt" data-ico="copy">Copiar la frase</button>
+      </div>
+      <div>
+        <h4>Desde la terminal</h4>
+        <p>La guía también viene dentro de la librería, siempre de tu misma versión:</p>
+        <pre class="ia-prompt">python -m pantalla ia &gt; pantalla-ia.md</pre>
+      </div>
+    </div>
+  </div>
 
   <div class="doc-seccion" id="sec-fuentes">
     <h3>Galería de <span>fuentes ASCII</span></h3>
@@ -7400,7 +7451,7 @@ const Docs = (() => {
     { id: "spinners", label: "Spinners" }, { id: "juegos", label: "Juegos" }, { id: "control", label: "Teclado y control" },
     { id: "avanzado", label: "Avanzado" },
   ];
-  const REFERENCIA = [["sec-fuentes", "Galería de fuentes"], ["sec-colores", "Colores"], ["sec-estilos", "Estilos de borde"]];
+  const REFERENCIA = [["sec-ia", "Guía para IA (descargar)"], ["sec-fuentes", "Galería de fuentes"], ["sec-colores", "Colores"], ["sec-estilos", "Estilos de borde"]];
   const corto = t => t.replace(/^pantalla\./, "").replace(/^Juego: /, "");
   let hecho = false, vigia = null, espia = null;
   const ESTADOS = new Map();
@@ -7862,14 +7913,15 @@ const Docs = (() => {
 })();
 
 const Inicio = (() => {
-  const OPCIONES = ["Constructor visual", "Documentación", "Galería de fuentes ASCII", "Ver el código de esta pantalla"];
+  const OPCIONES = ["Constructor visual", "Documentación", "Galería de fuentes ASCII", "Guía para IA (descargar)", "Ver el código de esta pantalla"];
   const AYUDA = {
     "Constructor visual": "Dibuja con el ratón y copia el código Python.",
     "Documentación": "Ejemplos que se tocan, con juegos y spinners.",
     "Galería de fuentes ASCII": "Escribe un texto y míralo en las 33 fuentes.",
+    "Guía para IA (descargar)": "Un .md o .json para que cualquier IA domine pantalla.",
     "Ver el código de esta pantalla": "El programa de Python que dibuja esta pantalla.",
   };
-  const DESTINO = ["constructor", "docs", "fuentes", "codigo"];
+  const DESTINO = ["constructor", "docs", "fuentes", "ia", "codigo"];
   let sel = 0, cols = 80, filas = 24, fs = 14, fase = "menu", geo = null, tipeo = null, empezado = false;
   const cv = () => $("inicio-term");
 
@@ -7885,7 +7937,7 @@ const Inicio = (() => {
     fs = Math.max(8, Math.min(18, fs));
   }
   function elementos() {
-    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 0.6" }];
+    const els = [{ tipo: "rodear", estilo: "doble", color: "cian", titulo: "pantalla 1.1" }];
     const menuEl = { tipo: "menu", opciones: OPCIONES, titulo: "¿Qué quieres hacer?", ayudas: OPCIONES.map(o => AYUDA[o]), color: "cian" };
     const g = menuGeom(menuEl);
     let fuente = null, titulo = null;
@@ -7936,7 +7988,7 @@ const Inicio = (() => {
     try { reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     if (reducido) { fase = "menu"; dibujar(); return; }
     fase = "arranque";
-    tipeo = { lineas: ["Python 3 · pantalla 0.6 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
+    tipeo = { lineas: ["Python 3 · pantalla 1.1 · escribe ayuda() para empezar", ">>> import pantalla", ">>> pantalla.limpiar()", ">>> opcion = pantalla.menu(OPCIONES, ayudas=AYUDA)"], linea: 0, letra: 0 };
     tipeo.lineas[0] = tipeo.lineas[0].slice(0, cols);
     tipeo.letra = tipeo.lineas[0].length;
     dibujarArranque();
@@ -7965,6 +8017,7 @@ const Inicio = (() => {
     constructor: ["for i in range(101):", "    pantalla.barra_progreso(i, 100, ancho=24)", "Abriendo el constructor..."],
     docs: ["pantalla.ayuda()", null, "Abriendo la documentación..."],
     fuentes: ["for f in pantalla.lista_fuentes():", "    print(pantalla.texto_grande(\"Hola\", fuente=f))", "Abriendo la galería de fuentes..."],
+    ia: ["python -m pantalla ia > pantalla-ia.md", null, "Preparando la guía para IA..."],
   };
   function dibujarSalida(s) {
     const P = nuevaPantalla(cols, filas);
@@ -8043,7 +8096,7 @@ const Inicio = (() => {
     l.push("AYUDA = {");
     OPCIONES.forEach(o => l.push(`    ${py(o)}: ${py(AYUDA[o])},`));
     l.push("}", "", "pantalla.limpiar()");
-    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 0.6"]]));
+    l.push(llamada("rodear", ["doble"], [["color", "cian"], ["titulo", "pantalla 1.1"]]));
     if (g.fuente) l.push(llamada("grande", ["pantalla"], [["y", g.yTitulo], ["fuente", g.fuente === "bloques" ? null : g.fuente], ["color", "amarillo"]]));
     l.push(llamada("centrar", [g.sub], [["y", g.ySub], ["color", "gris claro"]]));
     l.push(llamada("centrar", [g.pie], [["y", g.yPie], ["color", "gris"]]));
@@ -8240,7 +8293,7 @@ document.querySelectorAll("[data-volver]").forEach(b => {
 });
 
 function irA(seccion, opc = {}) {
-  const docs = seccion === "docs" || seccion === "fuentes";
+  const docs = seccion === "docs" || seccion === "fuentes" || seccion === "ia";
   cerrarPop();
   $("inicio").hidden = seccion !== "inicio";
   $("app-constructor").hidden = seccion !== "constructor";
@@ -8250,13 +8303,34 @@ function irA(seccion, opc = {}) {
   if (seccion === "constructor") { window.scrollTo(0, 0); arrancarConstructor(); }
   else if (docs) {
     Docs.arrancar();
-    if (seccion === "fuentes") requestAnimationFrame(() => $("sec-fuentes").scrollIntoView());
+    if (seccion === "fuentes" || seccion === "ia") requestAnimationFrame(() => $(seccion === "ia" ? "sec-ia" : "sec-fuentes").scrollIntoView());
     else window.scrollTo(0, 0);
   } else { window.scrollTo(0, 0); Inicio.arrancar(opc); }
   document.title = seccion === "constructor" ? "pantalla · constructor" : docs ? "pantalla · docs" : "pantalla";
 }
 window.irA = irA;
-function rutaActual() { const h = location.hash.slice(1); return ["constructor", "docs", "fuentes"].includes(h) ? h : "inicio"; }
+
+(() => {
+  document.querySelectorAll("#sec-ia [data-ico]").forEach(b => b.insertAdjacentHTML("afterbegin", ico(b.dataset.ico)));
+  const copiar = (texto, msg) => {
+    const mal = () => avisar("No he podido copiar: descárgalo con el otro botón");
+    const viejo = () => {
+      const t = document.createElement("textarea");
+      t.value = texto; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select();
+      let bien = false; try { bien = document.execCommand("copy"); } catch (e) {}
+      t.remove(); bien ? avisar(msg) : mal();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(() => avisar(msg), viejo);
+    else viejo();
+  };
+  let guia = null;
+  const traer = () => guia || (guia = fetch("pantalla-ia.md").then(r => { if (!r.ok) throw r; return r.text(); }).catch(e => { guia = null; throw e; }));
+  $("ia-copiar").addEventListener("click", () => {
+    traer().then(t => copiar(t, "Guía copiada. Pégala en el chat de tu IA"), () => avisar("No he podido leer la guía: descárgala con el botón"));
+  });
+  $("ia-copiar-prompt").addEventListener("click", () => copiar($("ia-prompt").textContent, "Copiado. Pégalo junto con la guía"));
+})();
+function rutaActual() { const h = location.hash.slice(1); return ["constructor", "docs", "fuentes", "ia"].includes(h) ? h : "inicio"; }
 window.addEventListener("hashchange", () => irA(rutaActual()));
 irA(rutaActual());
 </script>

@@ -327,6 +327,28 @@ def demo_cargas():
                                          "Consejo: con total=None la barra va y viene"])
 
 
+def guia_ia():
+    """Escribe la guía completa de pantalla para pasársela a una IA.
+
+        python -m pantalla ia > pantalla-ia.md
+    """
+    import os
+    import sys
+
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ia.md")
+    with open(ruta, encoding="utf-8") as archivo:
+        texto = archivo.read()
+    salida = getattr(sys.stdout, "buffer", None)
+    try:
+        if salida is not None:
+            salida.write(texto.encode("utf-8"))
+            salida.flush()
+        else:
+            sys.stdout.write(texto)
+    except BrokenPipeError:     # python -m pantalla ia | head
+        pass
+
+
 def main():
     import sys
 
@@ -335,6 +357,9 @@ def main():
         return
     if len(sys.argv) > 1 and sys.argv[1] == "ayuda":
         pantalla.ayuda()
+        return
+    if len(sys.argv) > 1 and sys.argv[1] in ("ia", "ai", "guia"):
+        guia_ia()
         return
 
     secciones = {

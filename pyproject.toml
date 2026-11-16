@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pantalla"
-version = "1.0.0"
+version = "1.1.0"
 description = "gotoxy para el siglo XXI: colores, cajas, menús, letras ASCII, ratón, spinners y juegos sin bucles en la terminal. En español y pensada para aprender Python."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -35,4 +35,4 @@ pantalla-demo = "pantalla.__main__:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pantalla = ["fuentes/*.flf"]
+pantalla = ["fuentes/*.flf", "ia.md"]
